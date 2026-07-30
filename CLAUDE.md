@@ -320,8 +320,10 @@ d'étape.** Demander validation de l'opérateur avant de passer à la suivante.
 - [x] **Étape 9 — GUI cockpit** (`gui/app.py`) : PyQt6, assemble tout le pipeline.
       *(Logique dans `guardian/affaire.py`, orchestrateur sans PyQt, testé ; PyQt6 =
       extra optionnel `[gui]`.)*
-- [ ] **Étape 10 — Autopsy** (`analysis/autopsy_runner.py`) : module optionnel de
-      corroboration, CLI/ingest.
+- [x] **Étape 10 — Autopsy** (`analysis/autopsy_runner.py`) : module optionnel de
+      corroboration, CLI/ingest. *(Invocation configurable — flags/args — car la CLI
+      d'Autopsy varie ; Finding INFO, comme LEAPP. Accepté tel quel par l'orchestrateur
+      via le contrat `Analyzer`.)*
 
 ---
 

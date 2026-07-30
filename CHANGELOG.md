@@ -15,6 +15,12 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 10 — Autopsy** (`analysis/autopsy_runner.py`), corroboration **optionnelle** :
+  `AutopsyRunner` (contrat `Analyzer`) produit un rapport de corroboration → Finding
+  `INFO` (comme LEAPP, n'est pas une détection). Invocation **configurable**
+  (`commande_autopsy`, `flag_entree`/`flag_sortie`, `args_supplementaires`) car la CLI
+  d'Autopsy varie selon les versions — pas de contrat CLI figé et potentiellement faux.
+  Accepté tel quel par `Affaire.analyser` sans changement (contrat générique). 7 tests.
 - **Étape 9 — Interface & orchestration**, en deux sous-lots :
   - `guardian/affaire.py` (9.1, **sans PyQt**) : classe `Affaire` qui tient le
     contexte (dossier, `TracedExecutor`, custody, registre) et enchaîne les phases
@@ -113,8 +119,9 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 - Documentation fondatrice : `README.md`, `CONTRIBUTING.md`, `SECURITY.md`,
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
-### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 10 — Autopsy : module optionnel de corroboration.
+### Feuille de route
+- **Étapes 0 → 10 terminées.** Prochains chantiers hors feuille de route initiale :
+  CI (GitHub Actions sur Ubuntu), essais sur appareils réels, empaquetage.
 
 ---
 
