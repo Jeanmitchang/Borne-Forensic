@@ -15,6 +15,15 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 8 — Rapport** (`report/builder.py`), zéro dépendance (stdlib), en deux
+  sous-lots (17 tests dédiés) :
+  - `journal_probatoire.jsonl` (un Finding par ligne) + `journal_probatoire.html`
+    (chaque Finding déplié, trace complète, ancres `id="F-xxxx"`) + `replay_manifest`
+    `.jsonl` (commandes `DETERMINISTIC` rejouables, vide si aucune — honnête).
+  - `rapport_synthese.html` : niveau qualitatif coloré, renvois `[F-xxxx]` cliquables,
+    formulation épistémique du corrélateur. PDF **optionnel** via outil système (tracé,
+    `None` si absent). `GenerateurRapport` assemble tout et produit `MANIFEST.sha256`
+    **en dernier**. Échappement HTML attribut/texte (apostrophes préservées, XSS géré).
 - **Étape 7 — Corrélateur** (`analysis/correlator.py`) : agrège les Findings en une
   `SyntheseCorrelation`. Score interne pondéré `Severity × Confidence` **restitué en
   niveaux qualitatifs** (`FORTS` / `MODERES` / `FAIBLES` / `AUCUN_OBSERVABLE`) —
@@ -93,7 +102,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 8 — Rapport : synthèse PDF + journal HTML/JSONL + replay_manifest + MANIFEST.
+- Étape 9 — GUI cockpit PyQt6 : assemble tout le pipeline.
 
 ---
 
