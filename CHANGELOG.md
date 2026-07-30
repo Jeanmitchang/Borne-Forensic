@@ -15,6 +15,13 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 2 — Détection device** (`detection/usb_watch.py`) : premier module métier
+  consommant le socle. Détection USB iOS (`idevice_id -l`) et Android (`adb devices`)
+  via le `TracedExecutor` (identité d'appareil + instant de connexion consignés dans
+  la custody). Diagnostic des prérequis Android (clé RSA non autorisée, hors-ligne,
+  permissions udev, débogage USB). Disponibilité des outils testée sans exécution
+  (`shutil.which`) pour dégrader proprement. Parseurs purs testés séparément
+  (15 tests ; 71 au total).
 - **Étape 1 — Socle `core/`** : le socle du projet, développé en quatre sous-lots,
   chacun couvert par des tests unitaires (56 tests au total ; ruff + mypy `--strict`).
   - `exceptions.py` : hiérarchie métier enracinée sur `GuardianError`.
@@ -40,7 +47,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 2 — Détection device : veille USB iOS/Android + diagnostic prérequis Android.
+- Étape 3 — Acquisition Android logique : bugreport + dumpsys + pull ciblé + APK.
 
 ---
 
