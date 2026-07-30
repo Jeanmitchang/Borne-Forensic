@@ -15,6 +15,14 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 7 — Corrélateur** (`analysis/correlator.py`) : agrège les Findings en une
+  `SyntheseCorrelation`. Score interne pondéré `Severity × Confidence` **restitué en
+  niveaux qualitatifs** (`FORTS` / `MODERES` / `FAIBLES` / `AUCUN_OBSERVABLE`) —
+  jamais un « % de culpabilité ». Niveau **piloté par la gravité** (pas un seuil
+  arbitraire). Absence **toujours** formulée « aucun indicateur PARMI CEUX
+  OBSERVABLES… », jamais « appareil sain » ; section **Limites** systématique ;
+  rappel « oriente, ne conclut pas à la culpabilité » (§11). Synthèse consignée en
+  custody. 14 tests dédiés.
 - **Étape 6 — Analyse LEAPP** (`analysis/leapp_runner.py`) : `_LEAPPRunnerBase`
   partagée + `ALEAPPRunner` (Android) et `ILEAPPRunner` (iOS). LEAPP **extrait des
   artefacts** (corroboration, §5) → Finding `INFO` avec le rapport (`index.html`)
@@ -85,7 +93,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 7 — Corrélateur : agrégation des Findings → score + niveau de confiance.
+- Étape 8 — Rapport : synthèse PDF + journal HTML/JSONL + replay_manifest + MANIFEST.
 
 ---
 
