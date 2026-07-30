@@ -15,6 +15,17 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 3 — Acquisition Android logique** (`acquisition/android_logical.py`), le
+  point clé du projet, en trois sous-lots (34 tests dédiés ; 98 au total) :
+  - `acquisition/base.py` : contrat abstrait `Acquirer` (lecture seule sur le
+    support source, tout via `TracedExecutor`), `ResultatAcquisition`, validation
+    d'identifiant d'appareil, bornage custody début/fin.
+  - Inventaire des signaux forts (§5) : services d'accessibilité, écouteurs de
+    notifications, administrateurs d'appareil (STRONG), paquets tiers (MEDIUM) ;
+    absence = INFO « observable sans root », échec = confiance faible, jamais masqué.
+  - `adb bugreport`, pull `/sdcard`, et extraction ciblée des **APK des paquets
+    impliqués dans les signaux forts** ; tous les artefacts hachés (SHA-256). Étapes
+    lourdes activables/désactivables. `acquerir()` orchestre l'ensemble.
 - **Étape 2 — Détection device** (`detection/usb_watch.py`) : premier module métier
   consommant le socle. Détection USB iOS (`idevice_id -l`) et Android (`adb devices`)
   via le `TracedExecutor` (identité d'appareil + instant de connexion consignés dans
@@ -47,7 +58,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 3 — Acquisition Android logique : bugreport + dumpsys + pull ciblé + APK.
+- Étape 4 — Acquisition iOS : `idevicebackup2` chiffré, mot de passe via custody.
 
 ---
 
