@@ -15,6 +15,18 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 1 — Socle `core/`** : le socle du projet, développé en quatre sous-lots,
+  chacun couvert par des tests unitaires (56 tests au total ; ruff + mypy `--strict`).
+  - `exceptions.py` : hiérarchie métier enracinée sur `GuardianError`.
+  - `logging_conf.py` : logging applicatif JSONL horodaté UTC, filtre de rédaction
+    des secrets, rotation, sans handler réseau.
+  - `custody.py` : hachage SHA-256, journal de custody **append-only chaîné par
+    hachage** (tamper-evident), consentement, `MANIFEST.sha256` (format `sha256sum`).
+  - `provenance.py` : `Finding`/`CommandTrace`, enums `Severity`/`Confidence`/
+    `Reproducibility`, `RegistreVersions`, et `TracedExecutor` (porte unique vers
+    `subprocess`, archivage + hachage + journalisation).
+  - `environment.py` : vérification des dépendances (§8) sans crash, capture de
+    version tracée, diagnostic autonome `python -m guardian.core.environment`.
 - **Étape 0 — Bootstrap** : `pyproject.toml` (Python ≥ 3.11, version dynamique
   depuis `guardian.__version__`, config Ruff/mypy strict/pytest, aucune dépendance
   runtime), paquet `guardian/` avec sous-paquets (`core`, `detection`,
@@ -28,7 +40,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 1 — Socle `core/` : exceptions, logging, custody, provenance, environment.
+- Étape 2 — Détection device : veille USB iOS/Android + diagnostic prérequis Android.
 
 ---
 
