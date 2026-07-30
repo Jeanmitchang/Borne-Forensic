@@ -15,6 +15,11 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 6 — Analyse LEAPP** (`analysis/leapp_runner.py`) : `_LEAPPRunnerBase`
+  partagée + `ALEAPPRunner` (Android) et `ILEAPPRunner` (iOS). LEAPP **extrait des
+  artefacts** (corroboration, §5) → Finding `INFO` avec le rapport (`index.html`)
+  comme pièce, pas `STRONG`. Type d'entrée validé (`fs`/`tar`/`zip`/`gz`) ; sortie
+  vide ou en erreur signalée non concluante. 8 tests dédiés.
 - **Étape 5 — Analyse MVT** (`analysis/mvt_runner.py` + `analysis/base.py`), en deux
   sous-lots (15 tests dédiés) :
   - Contrat `Analyzer` commun (toute commande via `TracedExecutor`, bornage custody).
@@ -80,7 +85,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 6 — Analyse LEAPP : iLEAPP / ALEAPP (artefacts).
+- Étape 7 — Corrélateur : agrégation des Findings → score + niveau de confiance.
 
 ---
 
