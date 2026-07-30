@@ -176,40 +176,50 @@ En fin d'analyse, produire `replay_manifest.jsonl` : liste ordonnée des command
 
 ## 7. Architecture du code (cible)
 
+> **Disposition retenue (tranchée à l'Étape 0)** : le code applicatif vit dans un
+> **paquet Python `guardian/`** (importable `guardian`, `python -m guardian`), et
+> non à plat à la racine. Motif : le README suppose `guardian.core.*` et
+> `pip install -e .` ; un `import core` à plat polluerait l'espace de noms global.
+> Un shim `main.py` à la racine permet aussi `python main.py`.
+
 ```
-guardian/
+Borne-Forensic/               # racine du dépôt
 ├── CLAUDE.md                 # ce fichier
-├── README.md                 # existant
-├── CONTRIBUTING.md           # existant
-├── SECURITY.md               # existant
-├── LICENSE                   # existant (GPLv3)
-├── pyproject.toml            # à créer (Étape 0)
-├── core/                     # SOCLE — Étape 1
-│   ├── __init__.py
-│   ├── exceptions.py         # erreurs métier explicites
-│   ├── logging_conf.py       # logs structurés, rotation
-│   ├── custody.py            # hachage SHA-256, journal append-only, consentement, manifeste
-│   ├── provenance.py         # Finding, CommandTrace, TracedExecutor, registre versions outils
-│   └── environment.py        # vérif dépendances au démarrage + capture versions
-├── detection/                # Étape 2
-│   └── usb_watch.py          # veille USB iOS + Android + diagnostic prérequis
-├── acquisition/              # Étapes 3-4
-│   ├── base.py               # interface commune Acquirer
-│   ├── android_logical.py    # bugreport + dumpsys + pull ciblé
-│   └── ios_backup.py         # idevicebackup2 chiffré
-├── analysis/                 # Étapes 5-7 et 10
-│   ├── base.py
-│   ├── mvt_runner.py         # MVT iOS + Android
-│   ├── leapp_runner.py       # iLEAPP / ALEAPP
-│   ├── autopsy_runner.py     # optionnel, corroboration
-│   └── correlator.py         # agrégation Findings → score + confiance
-├── report/                   # Étape 8
-│   └── builder.py            # PDF synthèse + HTML/JSONL journal + replay_manifest + MANIFEST.sha256
-├── gui/                      # Étape 9
-│   └── app.py                # PyQt6 cockpit
-├── tests/                    # tout au long
-└── main.py                   # point d'entrée
+├── README.md · CONTRIBUTING.md · SECURITY.md · LICENSE   # gouvernance
+├── CHANGELOG.md              # journal des modifications (Keep a Changelog)
+├── .github/                  # templates d'issue + de PR
+├── pyproject.toml            # métadonnées + outillage (Étape 0) ✅
+├── main.py                   # shim racine → guardian.main:main ✅
+├── guardian/                 # LE PAQUET Python
+│   ├── __init__.py           # __version__ (source unique) ✅
+│   ├── __main__.py           # « python -m guardian » ✅
+│   ├── main.py               # point d'entrée (banniere + main) ✅
+│   ├── core/                 # SOCLE — Étape 1 ✅
+│   │   ├── exceptions.py     # erreurs métier explicites
+│   │   ├── logging_conf.py   # logs structurés JSONL, rotation, rédaction secrets
+│   │   ├── custody.py        # SHA-256, journal append-only chaîné, consentement, manifeste
+│   │   ├── provenance.py     # Finding, CommandTrace, TracedExecutor, registre versions
+│   │   └── environment.py    # vérif dépendances + capture versions (tracée)
+│   ├── detection/            # Étape 2
+│   │   └── usb_watch.py      # veille USB iOS + Android + diagnostic prérequis
+│   ├── acquisition/          # Étapes 3-4
+│   │   ├── base.py           # interface commune Acquirer
+│   │   ├── android_logical.py # bugreport + dumpsys + pull ciblé
+│   │   └── ios_backup.py     # idevicebackup2 chiffré
+│   ├── analysis/             # Étapes 5-7 et 10
+│   │   ├── base.py
+│   │   ├── mvt_runner.py     # MVT iOS + Android
+│   │   ├── leapp_runner.py   # iLEAPP / ALEAPP
+│   │   ├── autopsy_runner.py # optionnel, corroboration
+│   │   └── correlator.py     # agrégation Findings → score + confiance
+│   ├── report/               # Étape 8
+│   │   └── builder.py        # PDF synthèse + HTML/JSONL + replay_manifest + MANIFEST.sha256
+│   └── gui/                  # Étape 9
+│       └── app.py            # PyQt6 cockpit
+└── tests/                    # tout au long (miroir des modules)
 ```
+
+*(✅ = déjà en place.)*
 
 ### Livrable par affaire
 
@@ -271,10 +281,11 @@ changement dans la PR. Corrections mineures = Git normal.
 Chaque étape doit être fonctionnelle et testée avant la suivante. **Ne pas sauter
 d'étape.** Demander validation de l'opérateur avant de passer à la suivante.
 
-- [ ] **Étape 0 — Bootstrap** : `pyproject.toml` (Python 3.11+, dépendances de base),
+- [x] **Étape 0 — Bootstrap** : `pyproject.toml` (Python 3.11+, dépendances de base),
       arborescence complète (dossiers avec `__init__.py`), `main.py` minimal qui
-      démarre et affiche « guardian v0.0 ».
-- [ ] **Étape 1 — Socle `core/`** (priorité absolue) :
+      démarre et affiche « guardian v0.0 ». *(Fait : paquet `guardian/`, bannière
+      `guardian v0.0.0`, version dynamique, ruff/mypy strict/pytest configurés.)*
+- [x] **Étape 1 — Socle `core/`** (priorité absolue) :
   - `exceptions.py` : hiérarchie d'exceptions métier (`GuardianError` racine,
     `AcquisitionError`, `AnalysisError`, `CustodyError`, `EnvironmentError`, etc.)
   - `logging_conf.py` : logging structuré, rotation, niveaux, formateur JSONL
@@ -286,6 +297,9 @@ d'étape.** Demander validation de l'opérateur avant de passer à la suivante.
   - `environment.py` : vérification de chaque dépendance (§8), capture de version,
     message clair si manquante
   - **Tests unitaires** pour chaque module (pytest, fixtures synthétiques)
+  - *(Fait : 5 modules + 56 tests ; journal de custody append-only **chaîné par
+    hachage** ; `EnvironmentError` renommé `EnvironmentCheckError` pour ne pas
+    masquer le builtin ; capture de version tracée via `TracedExecutor`.)*
 - [ ] **Étape 2 — Détection device** (`detection/usb_watch.py`) :
       veille USB iOS (`idevice_id -l`) + Android (`adb devices`) + diagnostic
       prérequis Android (débogage USB / clé RSA)
