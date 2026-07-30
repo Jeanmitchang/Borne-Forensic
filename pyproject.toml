@@ -1,0 +1,77 @@
+# ============================================================================
+#  pyproject.toml — guardian (nom de travail)
+#  Étape 0 — Bootstrap. Métadonnées, outillage qualité, aucun runtime lourd.
+# ============================================================================
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guardian"
+description = "Station d'analyse forensic hors-ligne pour la détection de stalkerware (nom de travail)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "guardian contributors" }]
+keywords = ["forensic", "stalkerware", "mvt", "libimobiledevice", "adb", "offline"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: X11 Applications :: Qt",
+  "Intended Audience :: Legal Industry",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Security",
+]
+# La version est lue dynamiquement depuis guardian.__version__ (source unique).
+dynamic = ["version"]
+# Aucune dépendance runtime à ce stade : le socle core/ (Étape 1) n'utilise que
+# la bibliothèque standard. Les dépendances lourdes (PyQt6, MVT…) seront ajoutées,
+# ÉPINGLÉES à une version précise, à l'étape qui les introduit (cf. CONTRIBUTING §6).
+dependencies = []
+
+[project.optional-dependencies]
+# Outils de développement uniquement (hors chemin d'exécution, hors surface
+# d'attaque runtime) : contraintes basses raisonnables plutôt qu'épinglage strict.
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[project.scripts]
+guardian = "guardian.main:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "guardian.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["guardian*"]
+
+# ----------------------------------------------------------------------------
+#  Qualité : Ruff (lint + format), mypy (typage strict), pytest
+# ----------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 95
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I isort, UP pyupgrade, B bugbear, SIM simplify,
+# C4 comprehensions. B protège notamment contre les except trop larges.
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4"]
+
+[tool.ruff.format]
+# Cohérent avec .gitattributes (eol=lf, cible Linux).
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# Le typage exhaustif est une exigence du projet (type hints partout, CLAUDE.md §9).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"

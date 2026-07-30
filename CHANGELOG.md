@@ -15,6 +15,12 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 0 — Bootstrap** : `pyproject.toml` (Python ≥ 3.11, version dynamique
+  depuis `guardian.__version__`, config Ruff/mypy strict/pytest, aucune dépendance
+  runtime), paquet `guardian/` avec sous-paquets (`core`, `detection`,
+  `acquisition`, `analysis`, `report`, `gui`), point d'entrée affichant la bannière
+  `guardian v0.0.0` (via `python -m guardian`, `python main.py`, ou l'entrée console
+  `guardian`), et test de fumée (`tests/test_bootstrap.py`, 3 tests verts).
 - Ossature de gouvernance du dépôt : `.gitignore` (durci « forensic »),
   `.gitattributes` (fins de ligne LF forcées, cible Linux), `CHANGELOG.md`,
   templates d'issue et de pull request (`.github/`).
@@ -22,7 +28,6 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 0 — Bootstrap : `pyproject.toml`, arborescence, `main.py` minimal.
 - Étape 1 — Socle `core/` : exceptions, logging, custody, provenance, environment.
 
 ---
