@@ -194,6 +194,7 @@ Borne-Forensic/               # racine du dépôt
 │   ├── __init__.py           # __version__ (source unique) ✅
 │   ├── __main__.py           # « python -m guardian » ✅
 │   ├── main.py               # point d'entrée (banniere + main) ✅
+│   ├── affaire.py            # ORCHESTRATEUR (sans PyQt) : enchaîne tout le pipeline ✅
 │   ├── core/                 # SOCLE — Étape 1 ✅
 │   │   ├── exceptions.py     # erreurs métier explicites
 │   │   ├── logging_conf.py   # logs structurés JSONL, rotation, rédaction secrets
@@ -300,22 +301,25 @@ d'étape.** Demander validation de l'opérateur avant de passer à la suivante.
   - *(Fait : 5 modules + 56 tests ; journal de custody append-only **chaîné par
     hachage** ; `EnvironmentError` renommé `EnvironmentCheckError` pour ne pas
     masquer le builtin ; capture de version tracée via `TracedExecutor`.)*
-- [ ] **Étape 2 — Détection device** (`detection/usb_watch.py`) :
+- [x] **Étape 2 — Détection device** (`detection/usb_watch.py`) :
       veille USB iOS (`idevice_id -l`) + Android (`adb devices`) + diagnostic
       prérequis Android (débogage USB / clé RSA)
-- [ ] **Étape 3 — Acquisition Android logique** (`acquisition/android_logical.py`) :
+- [x] **Étape 3 — Acquisition Android logique** (`acquisition/android_logical.py`) :
       **point clé du projet**. `adb bugreport` + inventaire `dumpsys` (signaux forts
       §5) + pull `/sdcard` + APK suspects. **Tout via `TracedExecutor`, tout haché.**
-- [ ] **Étape 4 — Acquisition iOS** (`acquisition/ios_backup.py`) : `idevicebackup2`
+- [x] **Étape 4 — Acquisition iOS** (`acquisition/ios_backup.py`) : `idevicebackup2`
       chiffré, gestion du mot de passe via custody (jamais en clair dans logs).
-- [ ] **Étape 5 — Analyse MVT** (`analysis/mvt_runner.py`) : iOS + Android,
-      IOC/blocklist ; consigner la version de la blocklist.
-- [ ] **Étape 6 — Analyse LEAPP** (`analysis/leapp_runner.py`) : iLEAPP / ALEAPP.
-- [ ] **Étape 7 — Corrélateur** (`analysis/correlator.py`) : agrégation Findings →
-      score + niveau de confiance explicite.
-- [ ] **Étape 8 — Rapport** (`report/builder.py`) : synthèse PDF + journal HTML/JSONL
-      + `replay_manifest.jsonl` + `MANIFEST.sha256`.
-- [ ] **Étape 9 — GUI cockpit** (`gui/app.py`) : PyQt6, assemble tout le pipeline.
+      *(Lecture seule par défaut ; activation du chiffrement = opt-in explicite, §2.)*
+- [x] **Étape 5 — Analyse MVT** (`analysis/mvt_runner.py`) : iOS + Android,
+      IOC/blocklist ; consigner la version de la blocklist. *(Base IOC optionnelle.)*
+- [x] **Étape 6 — Analyse LEAPP** (`analysis/leapp_runner.py`) : iLEAPP / ALEAPP.
+- [x] **Étape 7 — Corrélateur** (`analysis/correlator.py`) : agrégation Findings →
+      score + niveau de confiance explicite. *(Score interne → niveau qualitatif.)*
+- [x] **Étape 8 — Rapport** (`report/builder.py`) : synthèse HTML + journal HTML/JSONL
+      + `replay_manifest.jsonl` + `MANIFEST.sha256`. *(PDF optionnel, zéro dépendance.)*
+- [x] **Étape 9 — GUI cockpit** (`gui/app.py`) : PyQt6, assemble tout le pipeline.
+      *(Logique dans `guardian/affaire.py`, orchestrateur sans PyQt, testé ; PyQt6 =
+      extra optionnel `[gui]`.)*
 - [ ] **Étape 10 — Autopsy** (`analysis/autopsy_runner.py`) : module optionnel de
       corroboration, CLI/ingest.
 

@@ -32,6 +32,11 @@ dynamic = ["version"]
 dependencies = []
 
 [project.optional-dependencies]
+# Interface graphique : dépendance OPTIONNELLE. Le cœur (CLI, tests, headless)
+# s'installe et s'exécute sans elle ; guardian ne l'importe jamais au chargement.
+gui = [
+  "PyQt6>=6.6",
+]
 # Outils de développement uniquement (hors chemin d'exécution, hors surface
 # d'attaque runtime) : contraintes basses raisonnables plutôt qu'épinglage strict.
 dev = [
@@ -71,6 +76,18 @@ strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 # Le typage exhaustif est une exigence du projet (type hints partout, CLAUDE.md §9).
+
+# PyQt6 est optionnel : ne pas échouer là où il (ou ses stubs) est absent.
+[[tool.mypy.overrides]]
+module = ["PyQt6.*"]
+ignore_missing_imports = true
+
+# La couche GUI est une fine adaptation de l'orchestrateur (déjà typé strictement).
+# Le typage strict de Qt (signaux, retours Any) apporterait peu de sûreté pour
+# beaucoup de bruit : on ne le soumet pas à --strict. La logique reste dans affaire.py.
+[[tool.mypy.overrides]]
+module = ["guardian.gui.app"]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

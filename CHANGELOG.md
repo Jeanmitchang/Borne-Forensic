@@ -15,6 +15,18 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 9 — Interface & orchestration**, en deux sous-lots :
+  - `guardian/affaire.py` (9.1, **sans PyQt**) : classe `Affaire` qui tient le
+    contexte (dossier, `TracedExecutor`, custody, registre) et enchaîne les phases
+    (ouverture + consentement → détection → acquisition → analyse → corrélation →
+    rapport), en accumulant les Findings. Toute la logique, testable hors UI —
+    couverte par un test de pipeline complet end-to-end.
+  - `guardian/gui/app.py` (9.2, **PyQt6 optionnel** `[gui]`) : fenêtre cockpit, fine
+    couche appelant `Affaire`. Phases longues dans un `QThread` (UI non figée),
+    erreurs remontées à l'écran. PyQt6 jamais importé au chargement du paquet.
+  - Réglages : extra `[gui]`, mypy relâché sur `guardian.gui.*` (le typage strict de
+    Qt apporterait peu ; la logique est dans `affaire.py`). Tests GUI en mode
+    « offscreen », ignorés si PyQt6 absent.
 - **Étape 8 — Rapport** (`report/builder.py`), zéro dépendance (stdlib), en deux
   sous-lots (17 tests dédiés) :
   - `journal_probatoire.jsonl` (un Finding par ligne) + `journal_probatoire.html`
@@ -102,7 +114,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 9 — GUI cockpit PyQt6 : assemble tout le pipeline.
+- Étape 10 — Autopsy : module optionnel de corroboration.
 
 ---
 
