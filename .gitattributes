@@ -1,0 +1,37 @@
+# ============================================================================
+#  .gitattributes — guardian (nom de travail)
+# ----------------------------------------------------------------------------
+#  Le développement a lieu sous Windows 11, la cible d'exécution est Linux
+#  (Budgie). Sans normalisation, des fins de ligne CRLF committées casseraient
+#  les scripts shell côté Linux et pollueraient les diffs. On force LF partout.
+# ============================================================================
+
+# Par défaut : normaliser en LF dans le dépôt pour tout ce que Git détecte texte.
+* text=auto eol=lf
+
+# Fichiers texte explicitement en LF (robustesse même si l'auto-détection hésite)
+*.py     text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+*.toml   text eol=lf
+*.cfg    text eol=lf
+*.ini    text eol=lf
+*.json   text eol=lf
+*.jsonl  text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.sh     text eol=lf
+*.cfg    text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+
+# Fichiers binaires : ne jamais toucher aux fins de ligne.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.pdf  binary
+*.zip  binary
+*.ab   binary
+*.p12  binary
+*.pem  binary

@@ -1,0 +1,62 @@
+name: "💡 Proposition d'évolution"
+description: "Proposer une amélioration ou une nouvelle capacité de détection."
+labels: ["évolution", "à discuter"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de proposer une évolution.
+
+        Rappel des **priorités du projet, dans cet ordre** (cf. `CLAUDE.md` §4) :
+        1. Robustesse / gestion d'erreurs / logs
+        2. Couverture de détection
+        3. Rigueur juridique / chaîne de custody
+        4. Ergonomie
+
+        Une évolution qui améliore l'ergonomie au détriment de la custody sera refusée.
+        Les zones sensibles (socle `core/`, acquisition, format d'affaire, dépendances)
+        exigent **une issue de discussion avant tout code**.
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Besoin
+      description: "Quel problème concret cela résout-il ? Pour qui (opérateur, victime, juridiction) ?"
+    validations:
+      required: true
+  - type: textarea
+    id: proposition
+    attributes:
+      label: Proposition
+      description: "Description de l'évolution envisagée."
+    validations:
+      required: true
+  - type: dropdown
+    id: priorite-servie
+    attributes:
+      label: Priorité du projet servie
+      options:
+        - "1 — Robustesse / erreurs / logs"
+        - "2 — Couverture de détection"
+        - "3 — Rigueur juridique / custody"
+        - "4 — Ergonomie"
+    validations:
+      required: true
+  - type: textarea
+    id: impact-cadre
+    attributes:
+      label: Impact sur les garde-fous
+      description: >
+        Cette évolution touche-t-elle la lecture seule, le hors-ligne, la provenance,
+        le format du dossier d'affaire ou les dépendances ? (« aucun » est une réponse
+        valide mais doit être explicite.)
+    validations:
+      required: true
+  - type: checkboxes
+    id: garde-fous
+    attributes:
+      label: Compatibilité avec les garde-fous non négociables (CLAUDE.md §2)
+      options:
+        - label: "Ne requiert ni root, ni jailbreak, ni écriture sur le support source."
+          required: true
+        - label: "N'introduit aucun appel réseau (le projet est 100 % hors-ligne)."
+          required: true

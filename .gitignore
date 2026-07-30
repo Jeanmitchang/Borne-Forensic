@@ -1,0 +1,96 @@
+# ============================================================================
+#  .gitignore — guardian (nom de travail)
+# ----------------------------------------------------------------------------
+#  ATTENTION SÉCURITÉ (cf. SECURITY.md §3.2) :
+#  Ce fichier n'est pas un confort, c'est une barrière probatoire.
+#  Il INTERDIT PAR CONSTRUCTION le commit de toute donnée de victime,
+#  de tout secret et de toute sortie brute d'acquisition.
+#  Ne JAMAIS retirer les règles de la section « DONNÉES SENSIBLES ».
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+#  DONNÉES SENSIBLES — ne doivent JAMAIS quitter la machine de l'opérateur
+# ----------------------------------------------------------------------------
+# Dossiers d'affaire (tout format d'identifiant)
+dossier_affaire*/
+affaire_*/
+cases/
+affaires/
+
+# Sorties brutes hachées et journaux probatoires
+raw/
+*.out
+custody.jsonl
+journal_probatoire.*
+replay_manifest.jsonl
+consent.json
+MANIFEST.sha256
+rapport_synthese.pdf
+
+# Secrets et identifiants (mots de passe de sauvegarde iOS, etc.)
+*.secret
+*.key
+*.pem
+*.p12
+secrets/
+.secrets/
+*password*
+*credential*
+
+# Sauvegardes et acquisitions d'appareils
+*.backup
+*.ab
+backups/
+acquisitions/
+bugreport*.zip
+
+# ----------------------------------------------------------------------------
+#  PYTHON
+# ----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.installed.cfg
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+
+# Tests & couverture
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ----------------------------------------------------------------------------
+#  OUTILS & ÉDITEURS
+# ----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ----------------------------------------------------------------------------
+#  OS
+# ----------------------------------------------------------------------------
+# Le développement se fait sous Windows, la cible est Linux : on ignore les deux.
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----------------------------------------------------------------------------
+#  LOGS APPLICATIFS (les logs de dev ; jamais les journaux d'affaire ci-dessus)
+# ----------------------------------------------------------------------------
+*.log
+logs/

@@ -1,0 +1,70 @@
+name: "🐛 Rapport de bug"
+description: "Signaler un dysfonctionnement (jamais une faille de sécurité — voir SECURITY.md)."
+labels: ["bug", "à trier"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de signaler un bug.
+
+        **⚠️ Ne postez aucune donnée sensible** : identifiants d'affaire, identifiants
+        de device, contenus d'artefacts, secrets. Expurgez vos logs. Si vous ne pouvez
+        pas expurger sans perdre l'information, passez par le canal privé de `SECURITY.md`.
+
+        **Ceci n'est pas le lieu pour une faille de sécurité** → voir `SECURITY.md`.
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: "Sortie de `git rev-parse --short HEAD` ou tag utilisé."
+      placeholder: "ex. a1b2c3d"
+    validations:
+      required: true
+  - type: textarea
+    id: environnement
+    attributes:
+      label: Environnement
+      description: "Distribution Linux, version Python, versions des outils tiers détectés au démarrage."
+      placeholder: |
+        - Distribution : Ubuntu 24.04 (Budgie)
+        - Python : 3.11.x
+        - adb : x.x.x / libimobiledevice : x.x.x / mvt : x.x.x
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes de reproduction
+      description: "Étapes précises et minimales pour reproduire."
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: attendu-observe
+    attributes:
+      label: Comportement attendu vs observé
+      placeholder: |
+        Attendu : …
+        Observé : …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs pertinents (EXPURGÉS)
+      description: "Collez uniquement des logs débarrassés de toute donnée sensible."
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: "Ce rapport ne contient AUCUNE donnée réelle de victime ni secret."
+          required: true
+        - label: "Il ne s'agit pas d'une vulnérabilité de sécurité (sinon : SECURITY.md)."
+          required: true
