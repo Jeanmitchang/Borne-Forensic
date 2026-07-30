@@ -15,6 +15,15 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 5 — Analyse MVT** (`analysis/mvt_runner.py` + `analysis/base.py`), en deux
+  sous-lots (15 tests dédiés) :
+  - Contrat `Analyzer` commun (toute commande via `TracedExecutor`, bornage custody).
+  - `_MVTRunnerBase` partagée + `MVTAndroidRunner` (`check-bugreport`) et
+    `MVTIOSRunner` (`check-backup`). Détection IOC → Finding STRONG ; aucune → INFO
+    « aucun IOC parmi la base employée » ; échec → non concluant.
+  - Base IOC **optionnelle** (« prévoir les deux ») : si fournie, passée via `--iocs`
+    et son **empreinte consignée** (`base_ioc`) ; sinon détections MVT intégrées.
+    La version de la base employée est toujours traçable (§5).
 - **Étape 4 — Acquisition iOS** (`acquisition/ios_backup.py`), en deux sous-lots
   (13 tests dédiés) :
   - Gestion **sécurisée** du mot de passe de sauvegarde : callback fournisseur,
@@ -71,7 +80,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 5 — Analyse MVT : iOS + Android, IOC/blocklist, version de blocklist consignée.
+- Étape 6 — Analyse LEAPP : iLEAPP / ALEAPP (artefacts).
 
 ---
 

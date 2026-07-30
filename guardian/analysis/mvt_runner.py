@@ -192,3 +192,36 @@ class MVTAndroidRunner(_MVTRunnerBase):
             dossier_sortie=dossier_sortie,
             timeout=timeout,
         )
+
+
+# ---------------------------------------------------------------------------
+#  Runner iOS
+# ---------------------------------------------------------------------------
+class MVTIOSRunner(_MVTRunnerBase):
+    """Analyse MVT d'une sauvegarde iOS (``mvt-ios check-backup``).
+
+    La cible est le dossier de sauvegarde produit par ``idevicebackup2`` (Étape 4).
+    """
+
+    _OUTIL = "mvt-ios"
+    _SOUS_COMMANDE = "check-backup"
+    _SOUS_DOSSIER = "mvt_ios"
+
+    def __init__(
+        self,
+        executor: TracedExecutor,
+        cible_backup: Path | str,
+        *,
+        commande_mvt: Sequence[str] = ("mvt-ios",),
+        dossier_ioc: Path | str | None = None,
+        dossier_sortie: Path | str | None = None,
+        timeout: float = 900.0,
+    ) -> None:
+        super().__init__(
+            executor,
+            cible_backup,
+            commande_mvt=commande_mvt,
+            dossier_ioc=dossier_ioc,
+            dossier_sortie=dossier_sortie,
+            timeout=timeout,
+        )
