@@ -15,10 +15,18 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 
 from guardian.core.exceptions import ValidationError
 from guardian.core.logging_conf import obtenir_logger
-from guardian.core.provenance import Finding, TracedExecutor
+from guardian.core.provenance import (
+    Confidence,
+    ExecutionTracee,
+    Finding,
+    Reproducibility,
+    Severity,
+    TracedExecutor,
+)
 from guardian.detection.usb_watch import TypeAppareil
 
 # Un identifiant d'appareil (série adb / UDID iOS) est composé de caractères sûrs.
@@ -117,4 +125,25 @@ class Acquirer(ABC):
         self._logger.info(
             "acquisition terminée",
             extra={"complete": resultat.complete, "nb_findings": len(resultat.findings)},
+        )
+
+    # --- Helpers communs aux acquéreurs ------------------------------------
+    def _rel(self, chemin: Path) -> str:
+        """Chemin relatif POSIX d'un artefact, à la racine du dossier d'affaire."""
+        return chemin.relative_to(self._executor.dossier).as_posix()
+
+    def _finding_echec(self, tracee: ExecutionTracee, releve: str) -> Finding:
+        """Finding pour une opération en échec : confiance faible, sortie brute conservée.
+
+        On documente l'échec (jamais masqué, §5) plutôt que d'abandonner : la sortie
+        brute reste archivée pour analyse.
+        """
+        return tracee.en_finding(
+            value=(
+                f"Opération « {releve} » en échec (code {tracee.trace.exit_code}) — "
+                "voir la sortie brute ; résultat non concluant."
+            ),
+            severity=Severity.INFO,
+            confidence=Confidence.LOW,
+            reproducibility=Reproducibility.POINT_IN_TIME,
         )

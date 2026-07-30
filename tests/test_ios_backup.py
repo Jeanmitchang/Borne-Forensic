@@ -20,8 +20,28 @@ _INFO_INACTIF = 'print("false")'
 _INFO_ECHEC = "import sys; sys.exit(1)"
 
 # Faux idevicebackup2 : consomme stdin (le mot de passe) SANS le ré-émettre,
-# comme le ferait le vrai outil.
+# comme le ferait le vrai outil. Ne crée aucun fichier de sauvegarde.
 _BACKUP_OK = "import sys; sys.stdin.read(); print('encryption enabled')"
+
+# Faux idevicebackup2 complet : « encryption on » consomme stdin sans l'émettre ;
+# « backup <dir> » crée un dossier de sauvegarde réaliste (manifestes + données).
+_BACKUP_COMPLET = f"""
+import os, sys
+
+argv = sys.argv
+ligne = " ".join(argv)
+if "encryption" in ligne:
+    sys.stdin.read()
+    print("encryption enabled")
+elif "backup" in ligne:
+    dossier = os.path.join(argv[-1], "{_UDID}")
+    os.makedirs(dossier, exist_ok=True)
+    for nom in ("Manifest.plist", "Status.plist", "Info.plist"):
+        with open(os.path.join(dossier, nom), "wb") as f:
+            f.write(b"<plist>fake</plist>")
+    with open(os.path.join(dossier, "aa11bb22cc"), "wb") as f:
+        f.write(b"DONNEES_SAUVEGARDE")
+"""
 
 # Jeton distinctif pour traquer une éventuelle fuite du mot de passe.
 _SECRET = "Sup3rSecret_backup_2026_XYZ"
@@ -110,9 +130,55 @@ def test_le_mot_de_passe_ne_fuit_pas(tmp_path: Path) -> None:
         assert _SECRET not in fichier.read_text(encoding="utf-8", errors="replace")
 
 
-# --- acquerir (sous-lot 4.1 : détection seule) -----------------------------
-def test_acquerir_detection_seule_est_partielle(tmp_path: Path) -> None:
-    resultat = _acquereur(tmp_path, _INFO_ACTIF).acquerir()
-    assert resultat.complete is False
-    assert len(resultat.findings) == 1
-    assert "PARTIELLE" in resultat.resume()
+# --- Sauvegarde ------------------------------------------------------------
+def test_sauvegarder_produit_et_hache(tmp_path: Path) -> None:
+    finding, refs = _acquereur(tmp_path, backup_prog=_BACKUP_COMPLET).sauvegarder()
+    assert finding.confidence is Confidence.HIGH
+    assert any(ref.endswith("Manifest.plist") for ref in refs)
+    assert "Manifest.plist=" in finding.value  # empreinte présente
+
+
+def test_sauvegarder_echec_si_aucun_fichier(tmp_path: Path) -> None:
+    # _BACKUP_OK ne crée aucun fichier : la sauvegarde doit être signalée non concluante.
+    finding, refs = _acquereur(tmp_path, backup_prog=_BACKUP_OK).sauvegarder()
+    assert finding.confidence is Confidence.LOW
+    assert refs == ()
+
+
+# --- acquerir (orchestration complète) -------------------------------------
+def test_acquerir_complet_chiffrement_actif(tmp_path: Path) -> None:
+    resultat = _acquereur(
+        tmp_path, info_prog=_INFO_ACTIF, backup_prog=_BACKUP_COMPLET
+    ).acquerir()
+    assert resultat.complete is True
+    # détection d'état + sauvegarde (pas d'activation, déjà actif).
+    assert len(resultat.findings) == 2
+    assert any(ref.endswith("Manifest.plist") for ref in resultat.artefacts)
+
+
+def test_acquerir_inactif_sans_optin_sauvegarde_quand_meme(tmp_path: Path) -> None:
+    resultat = _acquereur(
+        tmp_path, info_prog=_INFO_INACTIF, backup_prog=_BACKUP_COMPLET
+    ).acquerir()
+    assert resultat.complete is True
+    assert len(resultat.findings) == 2  # état + sauvegarde, pas d'activation
+    assert "CLAIR" in resultat.findings[0].value
+
+
+def test_acquerir_inactif_avec_optin_active_le_chiffrement(tmp_path: Path) -> None:
+    resultat = _acquereur(
+        tmp_path,
+        info_prog=_INFO_INACTIF,
+        backup_prog=_BACKUP_COMPLET,
+        autoriser_activation_chiffrement=True,
+        fournisseur_mot_de_passe=lambda: _SECRET,
+    ).acquerir()
+    assert resultat.complete is True
+    # état + activation + sauvegarde.
+    assert len(resultat.findings) == 3
+
+    # Même via acquerir(), le mot de passe ne fuit pas.
+    custody = (tmp_path / "custody.jsonl").read_text(encoding="utf-8")
+    assert _SECRET not in custody
+    for fichier in (tmp_path / "raw").glob("*"):
+        assert _SECRET not in fichier.read_text(encoding="utf-8", errors="replace")

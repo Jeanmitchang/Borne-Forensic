@@ -15,6 +15,19 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Ajouté
+- **Étape 4 — Acquisition iOS** (`acquisition/ios_backup.py`), en deux sous-lots
+  (13 tests dédiés) :
+  - Gestion **sécurisée** du mot de passe de sauvegarde : callback fournisseur,
+    transmission à `idevicebackup2` via **stdin** (jamais en argument → jamais
+    archivé ni journalisé), non conservé ; garanti par un test « le mot de passe ne
+    fuit nulle part » (custody + sorties brutes).
+  - Détection de l'état du chiffrement (lecture seule, `ideviceinfo WillEncrypt`) ;
+    activation du chiffrement en **opt-in explicite** uniquement (elle modifie
+    l'appareil — arbitrage §2 vs §3/§10 en faveur du garde-fou lecture seule).
+  - Sauvegarde `idevicebackup2 backup` avec hachage des manifestes ; `acquerir()`
+    orchestre état → (opt-in) activation → sauvegarde. Sauvegarde vide/en erreur
+    signalée non concluante (jamais un faux succès).
+  - Helpers communs `_rel` / `_finding_echec` remontés dans `acquisition/base.py`.
 - **Étape 3 — Acquisition Android logique** (`acquisition/android_logical.py`), le
   point clé du projet, en trois sous-lots (34 tests dédiés ; 98 au total) :
   - `acquisition/base.py` : contrat abstrait `Acquirer` (lecture seule sur le
@@ -58,7 +71,7 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   `LICENSE` (GPLv3), `CLAUDE.md` (spécification technique complète).
 
 ### À venir (feuille de route — cf. `CLAUDE.md` §10)
-- Étape 4 — Acquisition iOS : `idevicebackup2` chiffré, mot de passe via custody.
+- Étape 5 — Analyse MVT : iOS + Android, IOC/blocklist, version de blocklist consignée.
 
 ---
 

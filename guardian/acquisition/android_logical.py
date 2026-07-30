@@ -150,23 +150,7 @@ class AndroidLogicalAcquirer(Acquirer):
         """Exécute ``adb -s <série> shell <commande>``."""
         return self._adb(["shell", *commande])
 
-    def _rel(self, chemin: Path) -> str:
-        """Chemin relatif POSIX d'un artefact, à la racine du dossier d'affaire."""
-        return chemin.relative_to(self._executor.dossier).as_posix()
-
     # --- Constructeurs de Finding ------------------------------------------
-    def _finding_echec(self, tracee: ExecutionTracee, releve: str) -> Finding:
-        """Finding pour un relevé en échec : confiance faible, sortie brute conservée."""
-        return tracee.en_finding(
-            value=(
-                f"Relevé « {releve} » en échec (code {tracee.trace.exit_code}) — "
-                "voir la sortie brute ; résultat non concluant."
-            ),
-            severity=Severity.INFO,
-            confidence=Confidence.LOW,
-            reproducibility=Reproducibility.POINT_IN_TIME,
-        )
-
     def _finding_liste_forte(
         self, tracee: ExecutionTracee, composants: list[str], libelle: str
     ) -> Finding:

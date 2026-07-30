@@ -20,8 +20,10 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from enum import StrEnum
+from pathlib import Path
 
 from guardian.acquisition.base import Acquirer, ResultatAcquisition
+from guardian.core.custody import hacher_fichier
 from guardian.core.exceptions import AcquisitionError
 from guardian.core.provenance import (
     Confidence,
@@ -63,6 +65,7 @@ class IOSBackupAcquirer(Acquirer):
         commande_idevicebackup2: Sequence[str] = ("idevicebackup2",),
         commande_ideviceinfo: Sequence[str] = ("ideviceinfo",),
         fournisseur_mot_de_passe: FournisseurMotDePasse | None = None,
+        dossier_backup: Path | str | None = None,
         timeout: float = 60.0,
         timeout_lourd: float = 1800.0,
         autoriser_activation_chiffrement: bool = False,
@@ -71,6 +74,11 @@ class IOSBackupAcquirer(Acquirer):
         self._cmd_backup = tuple(commande_idevicebackup2)
         self._cmd_info = tuple(commande_ideviceinfo)
         self._fournisseur_mdp = fournisseur_mot_de_passe
+        self._dossier_backup = (
+            Path(dossier_backup)
+            if dossier_backup is not None
+            else executor.dossier / "backup_ios"
+        )
         self._timeout = timeout
         self._timeout_lourd = timeout_lourd
         self._autoriser_activation = autoriser_activation_chiffrement
@@ -191,22 +199,71 @@ class IOSBackupAcquirer(Acquirer):
             reproducibility=Reproducibility.POINT_IN_TIME,
         )
 
-    # --- Orchestration (complétée au sous-lot 4.2) -------------------------
-    def acquerir(self) -> ResultatAcquisition:
-        """Acquisition iOS (sous-lot 4.1 : détection d'état seule).
+    # --- Sauvegarde --------------------------------------------------------
+    _FICHIERS_CLES = ("Manifest.plist", "Status.plist", "Info.plist")
 
-        Détecte l'état du chiffrement sans modifier l'appareil. La sauvegarde
-        proprement dite (``idevicebackup2 backup``) est ajoutée au sous-lot 4.2 ;
-        ``complete`` vaut donc faux à ce stade.
+    def sauvegarder(self) -> tuple[Finding, tuple[str, ...]]:
+        """Effectue ``idevicebackup2 backup`` et hache les manifestes produits.
+
+        La sauvegarde ne requiert PAS le mot de passe (l'appareil chiffre lui-même
+        selon son réglage) ; le mot de passe ne sert qu'à l'analyse ultérieure (MVT).
+        """
+        self._dossier_backup.mkdir(parents=True, exist_ok=True)
+        tracee = self._idevicebackup2(
+            ["backup", str(self._dossier_backup)], timeout=self._timeout_lourd
+        )
+        fichiers = [p for p in self._dossier_backup.rglob("*") if p.is_file()]
+        # Une sauvegarde en erreur OU sans aucun fichier est non concluante (§5,
+        # échouer bruyamment) : on la signale, on ne la fait pas passer pour un succès.
+        if tracee.trace.exit_code != 0 or not fichiers:
+            return self._finding_echec(tracee, "sauvegarde iOS"), ()
+        refs = tuple(self._rel(p) for p in fichiers)
+        cles = [f for f in fichiers if f.name in self._FICHIERS_CLES]
+        empreintes = (
+            ", ".join(f"{f.name}={hacher_fichier(f)[:16]}…" for f in cles)
+            if cles
+            else "aucun manifeste standard trouvé"
+        )
+        finding = tracee.en_finding(
+            value=f"Sauvegarde iOS : {len(fichiers)} fichier(s) ({empreintes}).",
+            severity=Severity.INFO,
+            confidence=Confidence.HIGH,
+            reproducibility=Reproducibility.POINT_IN_TIME,
+        )
+        return finding, refs
+
+    # --- Orchestration -----------------------------------------------------
+    def acquerir(self) -> ResultatAcquisition:
+        """Acquisition iOS complète : état du chiffrement, (opt-in) activation, sauvegarde.
+
+        Lecture seule par défaut. Si le chiffrement est INACTIF et que l'opt-in est
+        donné (avec fournisseur de mot de passe), on l'active d'abord ; sinon on
+        sauvegarde tel quel en ayant documenté l'état. ``complete`` vaut vrai si la
+        sauvegarde a produit des fichiers (Finding en confiance non faible).
         """
         self._consigner_debut()
-        _, finding_etat = self.detecter_etat_chiffrement()
+        etat, finding_etat = self.detecter_etat_chiffrement()
+        findings: list[Finding] = [finding_etat]
+        artefacts: list[str] = [finding_etat.raw_output_ref]
+
+        if (
+            etat is EtatChiffrement.INACTIF
+            and self._autoriser_activation
+            and self._fournisseur_mdp is not None
+        ):
+            findings.append(self.activer_chiffrement())
+
+        finding_backup, refs = self.sauvegarder()
+        findings.append(finding_backup)
+        artefacts.extend(refs)
+
+        complete = all(f.confidence is not Confidence.LOW for f in findings)
         resultat = ResultatAcquisition(
             plateforme=self.plateforme,
             identifiant_appareil=self.identifiant,
-            findings=(finding_etat,),
-            artefacts=(finding_etat.raw_output_ref,),
-            complete=False,
+            findings=tuple(findings),
+            artefacts=tuple(artefacts),
+            complete=complete,
         )
         self._consigner_fin(resultat)
         return resultat
