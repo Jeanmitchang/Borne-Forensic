@@ -13,9 +13,11 @@
 
 ## 1. État au 2026-07-31
 
-- **Branche** : `main` · **dernier commit** : `ec8a243` (+ lot en préparation, non commité)
-- **Avancement** : **feuille de route `CLAUDE.md` §10 terminée — étapes 0 → 10.**
-  Chantier en cours : **préparation des essais terrain** (protocole + correctif P0-B).
+- **Dépôt distant** : `Jeanmitchang/Borne-Forensic` (**privé**) · branche `main`.
+- **Dernier commit** : `153a16f` · **CI GitHub Actions verte** (lint + tests 3.11/3.12/3.13
+  + GUI, sur Ubuntu).
+- **Avancement** : **feuille de route `CLAUDE.md` §10 terminée — étapes 0 → 10** ;
+  **CI en place et verte**, **dépôt poussé (privé)**.
 - **Volume** : 22 modules `guardian/` · 19 fichiers de tests ·
   **182 tests, tous verts**.
 - **Chaîne qualité** : `ruff` (lint + format) ✅ · `mypy --strict` (26 fichiers) ✅ ·
@@ -199,6 +201,27 @@ est un signal probatoire, pas un simple échec technique.
   premier `git push` vers GitHub. Badge README à ajouter une fois le slug connu (§5.4).
 - **Prochaine action** : publier le dépôt (remplir `SECURITY.md` §5.3 et les templates
   `.github` §5.4 **avant** publication), ou essais terrain.
+
+### 2026-07-31 (3) — Dépôt poussé (privé) + CI verte
+- **Fait** :
+  - Créé le dépôt **privé** `Jeanmitchang/Borne-Forensic` (compte GitHub `Jeanmitchang` ;
+    les commits restent signés `Blinkjeremy` = `user.name` Git local) et poussé `main`.
+  - **CI verte** après un correctif : `ruff 0.16` (installé par la CI) reformate les
+    blocs de code Python dans les `.md` → `ruff format --check .` voulait retoucher
+    `CLAUDE.md`. Corrigé par `extend-exclude = ["*.md"]` dans `pyproject.toml` (la doc
+    Markdown sort du périmètre ruff, lint ET format).
+  - Résultat : `lint` + `tests` (3.11/3.12/3.13) + `gui` (PyQt6 offscreen) tous verts.
+- **À noter (dette légère, non bloquant)** :
+  - **Divergence de version ruff** : local `0.13.3` (site-packages système Windows,
+    non-writeable, masque le user `0.16.1`) vs CI `0.16.1`. **La CI fait foi.** Aligner
+    l'environnement local un jour, ou épingler ruff dans `[dev]`.
+  - Annotation CI « Node.js 20 deprecated » : `actions/checkout@v4` /
+    `actions/setup-python@v5` forcés sur Node 24. Passer à `checkout@v5` le moment venu.
+- **Avant de rendre le dépôt public** : remplir `SECURITY.md` (§5.3, email + PGP) et
+  le template `.github/ISSUE_TEMPLATE/config.yml` (§5.4, `OWNER/REPO` →
+  `Jeanmitchang/Borne-Forensic`) ; ajouter le badge CI au README.
+- **Prochaine action** : essais terrain (`docs/ESSAIS_TERRAIN.md`), ou préparation de
+  la mise en public (SECURITY.md + templates + badge).
 
 <!--
 ### AAAA-MM-JJ — Titre
