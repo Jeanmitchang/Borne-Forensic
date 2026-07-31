@@ -17,7 +17,7 @@ ou version de MVT via la trace de commande).
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import ClassVar
 
@@ -33,6 +33,11 @@ from guardian.core.provenance import (
 
 # MVT nomme les fichiers de détection « <module>_detected.json ».
 _SUFFIXE_DETECTION = "_detected.json"
+
+# Callback fournissant le mot de passe de sauvegarde iOS au moment voulu. Appelé
+# uniquement à l'exécution, jamais conservé sur l'objet ni journalisé (cf. la voie
+# ``env`` du TracedExecutor, réservée aux secrets hors ``args``).
+FournisseurMotDePasse = Callable[[], str]
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +76,9 @@ class _MVTRunnerBase(Analyzer):
     _OUTIL: ClassVar[str]
     _SOUS_COMMANDE: ClassVar[str]
     _SOUS_DOSSIER: ClassVar[str]
+    # Variable d'environnement par laquelle MVT reçoit le mot de passe de sauvegarde
+    # (chiffrée). ``None`` sur les runners qui n'en ont pas l'usage (Android).
+    _VAR_ENV_MDP: ClassVar[str | None] = None
 
     def __init__(
         self,
@@ -81,12 +89,14 @@ class _MVTRunnerBase(Analyzer):
         dossier_ioc: Path | str | None = None,
         dossier_sortie: Path | str | None = None,
         timeout: float = 900.0,
+        fournisseur_mot_de_passe: FournisseurMotDePasse | None = None,
     ) -> None:
         super().__init__(executor)
         self._cible = Path(cible)
         if not self._cible.exists():
             raise ValidationError(f"Cible d'analyse introuvable : {self._cible}")
         self._commande_mvt = tuple(commande_mvt)
+        self._fournisseur_mdp = fournisseur_mot_de_passe
         self._dossier_ioc: Path | None = None
         if dossier_ioc is not None:
             self._dossier_ioc = Path(dossier_ioc)
@@ -113,6 +123,19 @@ class _MVTRunnerBase(Analyzer):
         )
         return empreinte
 
+    def _env_mot_de_passe(self) -> dict[str, str] | None:
+        """Construit l'environnement portant le mot de passe de sauvegarde, si requis.
+
+        Retourne ``None`` (aucune surcharge d'environnement) sauf si le runner définit
+        une variable dédiée (``_VAR_ENV_MDP``) **et** qu'un fournisseur est configuré.
+        Le mot de passe est obtenu à cet instant précis, placé dans l'environnement du
+        seul sous-processus MVT (voie non tracée), et jamais conservé sur l'objet ni
+        journalisé (§2 : aucun secret en clair dans logs, custody, args).
+        """
+        if self._VAR_ENV_MDP is None or self._fournisseur_mdp is None:
+            return None
+        return {self._VAR_ENV_MDP: self._fournisseur_mdp()}
+
     def analyser(self) -> ResultatAnalyse:
         self._consigner_debut()
         self._dossier_sortie.mkdir(parents=True, exist_ok=True)
@@ -129,7 +152,9 @@ class _MVTRunnerBase(Analyzer):
             args += ["--iocs", str(self._dossier_ioc)]
         args.append(str(self._cible))
 
-        tracee = self._executor.executer(args, timeout=self._timeout)
+        tracee = self._executor.executer(
+            args, timeout=self._timeout, env=self._env_mot_de_passe()
+        )
         if tracee.trace.exit_code != 0:
             finding = self._finding_echec(tracee, f"{self.outil} {self._SOUS_COMMANDE}")
             resultat = ResultatAnalyse(self.outil, (finding,), (), complete=False)
@@ -201,11 +226,18 @@ class MVTIOSRunner(_MVTRunnerBase):
     """Analyse MVT d'une sauvegarde iOS (``mvt-ios check-backup``).
 
     La cible est le dossier de sauvegarde produit par ``idevicebackup2`` (Étape 4).
+
+    **Sauvegarde chiffrée.** MVT ne peut lire une sauvegarde chiffrée sans le mot de
+    passe. Fournir ``fournisseur_mot_de_passe`` (callback) : le mot de passe est alors
+    transmis à MVT via la variable d'environnement ``MVT_IOS_BACKUP_PASSWORD`` — jamais
+    en argument, jamais journalisé (§2). Sans fournisseur, seul un backup **en clair**
+    est analysable (couverture moindre, cf. ``ios_backup.py``).
     """
 
     _OUTIL = "mvt-ios"
     _SOUS_COMMANDE = "check-backup"
     _SOUS_DOSSIER = "mvt_ios"
+    _VAR_ENV_MDP = "MVT_IOS_BACKUP_PASSWORD"
 
     def __init__(
         self,
@@ -216,6 +248,7 @@ class MVTIOSRunner(_MVTRunnerBase):
         dossier_ioc: Path | str | None = None,
         dossier_sortie: Path | str | None = None,
         timeout: float = 900.0,
+        fournisseur_mot_de_passe: FournisseurMotDePasse | None = None,
     ) -> None:
         super().__init__(
             executor,
@@ -224,4 +257,5 @@ class MVTIOSRunner(_MVTRunnerBase):
             dossier_ioc=dossier_ioc,
             dossier_sortie=dossier_sortie,
             timeout=timeout,
+            fournisseur_mot_de_passe=fournisseur_mot_de_passe,
         )

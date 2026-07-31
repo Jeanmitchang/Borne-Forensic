@@ -119,6 +119,35 @@ def test_timeout_leve_provenance(tmp_path: Path) -> None:
         ex.executer([sys.executable, "-c", "import time; time.sleep(5)"], timeout=0.5)
 
 
+def test_env_transmis_et_environnement_systeme_preserve(tmp_path: Path) -> None:
+    """``env`` surcharge l'environnement sans écraser l'héritage (PATH conservé)."""
+    ex = _executor(tmp_path)
+    # Le sous-programme confirme la présence de la var fournie ET d'une var héritée,
+    # sans jamais réécrire la valeur du secret sur sa sortie.
+    prog = (
+        "import os, sys; "
+        "ok = os.environ.get('GUARDIAN_TEST_VAR') == 'attendu' and 'PATH' in os.environ; "
+        "sys.stdout.write('PRESENT' if ok else 'ABSENT')"
+    )
+    res = ex.executer([sys.executable, "-c", prog], env={"GUARDIAN_TEST_VAR": "attendu"})
+    assert res.texte_stdout() == "PRESENT"
+
+
+def test_env_secret_ne_fuit_ni_dans_raw_ni_dans_custody(tmp_path: Path) -> None:
+    """Un secret passé par ``env`` n'apparaît ni dans la trace, ni raw/, ni custody."""
+    secret = "S3cr3t-NE-DOIT-PAS-FUITER"
+    ex = _executor(tmp_path)
+    prog = "import sys; sys.stdout.write('ok')"
+    res = ex.executer([sys.executable, "-c", prog], env={"MVT_IOS_BACKUP_PASSWORD": secret})
+    # La commande a bien tourné, mais le secret n'est nulle part.
+    assert res.texte_stdout() == "ok"
+    assert secret not in " ".join(res.trace.args)
+    assert secret not in (tmp_path / "raw" / f"{res.finding_id}.out").read_text(
+        encoding="utf-8"
+    )
+    assert secret not in (tmp_path / "custody.jsonl").read_text(encoding="utf-8")
+
+
 def test_version_binaire_provient_du_registre(tmp_path: Path) -> None:
     registre = RegistreVersions()
     registre.enregistrer(sys.executable, "3.x-test")

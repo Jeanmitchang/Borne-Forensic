@@ -20,9 +20,10 @@ l'est pas — c'est un faux pas juridique exploitable par un contradicteur.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -261,6 +262,7 @@ class TracedExecutor:
         cwd: Path | str | None = None,
         timeout: float | None = None,
         entree: bytes | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> ExecutionTracee:
         """Exécute ``args`` (liste, jamais shell) et retourne l'exécution tracée.
 
@@ -268,6 +270,12 @@ class TracedExecutor:
         :param cwd: répertoire de travail ; par défaut le dossier d'affaire.
         :param timeout: délai maximal en secondes ; dépassement = ``ProvenanceError``.
         :param entree: données à passer sur stdin, le cas échéant.
+        :param env: variables d'environnement **surchargeant** celles du processus
+            (fusion avec ``os.environ``, les clés fournies l'emportent). Voie réservée
+            aux **secrets** qui ne doivent jamais transiter par ``args`` (ex. mot de
+            passe de sauvegarde iOS pour MVT) : comme ``entree`` (stdin), ``env``
+            n'est **ni archivé dans** ``raw/`` **ni journalisé** dans la custody. Ne
+            jamais y placer une valeur destinée à être tracée.
         :raises ValidationError: si ``args`` est invalide.
         :raises ProvenanceError: si le binaire est introuvable, en délai dépassé, ou
             si l'archivage de la sortie échoue.
@@ -286,6 +294,9 @@ class TracedExecutor:
 
         binaire = args[0]
         repertoire = Path(cwd) if cwd is not None else self.dossier
+        # Fusion avec l'environnement courant : passer ``env=`` seul à subprocess le
+        # remplacerait entièrement (PATH, HOME… perdus). ``None`` => héritage complet.
+        environnement = {**os.environ, **env} if env is not None else None
         finding_id = self._prochain_id()
         horodatage = horodatage_utc()
         debut = time.monotonic()
@@ -296,6 +307,7 @@ class TracedExecutor:
                 cwd=repertoire,
                 timeout=timeout,
                 input=entree,
+                env=environnement,
                 check=False,
             )
         except FileNotFoundError as exc:

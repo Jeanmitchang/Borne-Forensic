@@ -14,7 +14,26 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Corrigé
+- **Analyse MVT iOS sur sauvegarde chiffrée (angle mort).** `mvt-ios check-backup` ne
+  peut lire une sauvegarde chiffrée sans le mot de passe ; le runner ne le fournissait
+  pas → risque de « aucun IOC » **silencieux** sur le cas nominal (le chiffré capture
+  plus de données). `MVTIOSRunner` accepte désormais un `fournisseur_mot_de_passe`
+  (callback), transmis à MVT via la variable d'environnement `MVT_IOS_BACKUP_PASSWORD`
+  — jamais en argument, jamais journalisé (§2). Sans fournisseur, comportement inchangé
+  (backup en clair uniquement). Détecté en préparation des essais terrain.
+
 ### Ajouté
+- **Voie `env` de `TracedExecutor.executer`** : passage de variables d'environnement
+  **surchargeant** `os.environ` (héritage préservé), réservé aux **secrets** hors
+  `args` — comme `entree` (stdin), `env` n'est **ni archivé** dans `raw/` **ni
+  journalisé** en custody. Couvert par des tests de transmission et de **non-fuite**
+  (raw + custody). Sert au mot de passe MVT iOS (cf. Corrigé).
+- **Protocole d'essai sur appareils réels** (`docs/ESSAIS_TERRAIN.md`) : commandes
+  exactes lancées par chaque runner, grille de consignation des écarts, et **audit
+  priorisé** des points où le parsing risque de diverger des vraies sorties
+  (`dumpsys device_policy` en regex, propagation du code retour d'`adb shell`, APK en
+  splits, timeouts, codes de sortie MVT…). Doctrine « observer d'abord, corriger ensuite ».
 - **Étape 10 — Autopsy** (`analysis/autopsy_runner.py`), corroboration **optionnelle** :
   `AutopsyRunner` (contrat `Analyzer`) produit un rapport de corroboration → Finding
   `INFO` (comme LEAPP, n'est pas une détection). Invocation **configurable**

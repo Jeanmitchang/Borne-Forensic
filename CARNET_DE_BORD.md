@@ -11,12 +11,13 @@
 
 ---
 
-## 1. État au 2026-07-30
+## 1. État au 2026-07-31
 
-- **Branche** : `main` · **dernier commit** : `e3471e0`
+- **Branche** : `main` · **dernier commit** : `ec8a243` (+ lot en préparation, non commité)
 - **Avancement** : **feuille de route `CLAUDE.md` §10 terminée — étapes 0 → 10.**
-- **Volume** : 22 commits · 22 modules `guardian/` · 19 fichiers de tests ·
-  **177 tests, tous verts**.
+  Chantier en cours : **préparation des essais terrain** (protocole + correctif P0-B).
+- **Volume** : 22 modules `guardian/` · 19 fichiers de tests ·
+  **182 tests, tous verts**.
 - **Chaîne qualité** : `ruff` (lint + format) ✅ · `mypy --strict` (26 fichiers) ✅ ·
   `pytest` ✅.
 - **Statut fonctionnel** : pipeline complet **détection → acquisition (Android/iOS) →
@@ -114,6 +115,11 @@ de `CLAUDE.md` §3). **Ne pas les rediscuter sans raison.**
    fins de ligne LF. *Prochaine action conseillée.*
 2. **Essais sur appareils réels** — les runners sont validés avec des outils simulés
    (adb/mvt/idevicebackup2/leapp/autopsy factices). Confronter aux vraies sorties.
+   **Protocole + audit priorisé** disponibles : `docs/ESSAIS_TERRAIN.md`. Points
+   restant à vérifier terrain : **P0-A** (`dumpsys device_policy` parsé en regex →
+   faux admin FORT ?), **P0-C** (propagation du code retour `adb shell`), **P1-D** (APK
+   en splits non capturés), timeouts, codes de sortie MVT. **P0-B corrigé** (mot de
+   passe MVT iOS via `env`, cf. §7 session 2026-07-31).
 3. **`SECURITY.md`** — remplir les contacts sécurité (`<À COMPLÉTER>` : email + PGP)
    **avant** toute publication publique du dépôt.
 4. **`.github/ISSUE_TEMPLATE/config.yml`** — remplacer `OWNER/REPO` par le vrai dépôt.
@@ -161,6 +167,26 @@ est un signal probatoire, pas un simple échec technique.
 - Fin de session : 22 commits, 177 tests verts, chaîne qualité complète au vert.
 - **Reprise prévue** : mettre en place la CI (§5.1), puis premiers essais sur
   appareils réels.
+
+### 2026-07-31 — Préparation des essais terrain + correctif P0-B (MVT iOS chiffré)
+- **Fait** :
+  - Rédigé `docs/ESSAIS_TERRAIN.md` : protocole d'essai sur appareils réels calé sur
+    les commandes exactes des runners, grille de consignation des écarts, et **audit
+    priorisé** des fragilités de parsing face aux vraies sorties.
+  - **Corrigé P0-B** (angle mort) : `MVTIOSRunner` ne pouvait pas lire une sauvegarde
+    iOS **chiffrée** (pas de mot de passe transmis) → « aucun IOC » silencieux sur le
+    cas nominal. Ajout d'un `fournisseur_mot_de_passe` (callback) transmis via la
+    nouvelle **voie `env`** de `TracedExecutor.executer` (variable
+    `MVT_IOS_BACKUP_PASSWORD`), jamais en argument, jamais journalisée.
+  - Tests : +5 (2 provenance : transmission `env` + non-fuite raw/custody ; 3 MVT iOS :
+    transmission, absence sans fournisseur, non-fuite custody). **182 tests verts**,
+    ruff + mypy `--strict` au vert.
+- **Décidé** : le passage de secrets à un sous-processus se fait par `env` (fusionné à
+  `os.environ`, non tracé), au même titre que `stdin` — jamais par `args`.
+- **En cours / bloqué** : rien. P0-A, P0-C, P1-D et les timeouts restent à **confronter
+  au matériel réel** (pas faisable sans appareil).
+- **Prochaine action** : essais terrain guidés par `docs/ESSAIS_TERRAIN.md`, ou CI
+  GitHub Actions (§5.1), selon disponibilité du matériel.
 
 <!--
 ### AAAA-MM-JJ — Titre
