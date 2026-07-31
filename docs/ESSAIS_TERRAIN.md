@@ -83,6 +83,10 @@ Installer une app de test bénigne et **lui accorder** un service d'accessibilit
 l'accès aux notifications (Réglages → Accessibilité / Accès aux notifications). But :
 vérifier que guardian la fait bien remonter en **FORT**, avec le bon nom de composant.
 
+> **Mise en place pas à pas de l'appareil Android de test** (débogage USB, clé RSA,
+> activation contrôlée des trois vecteurs, contrôle négatif, remise à zéro) :
+> voir **`docs/CHECKLIST_APPAREIL_ANDROID.md`**.
+
 ### 4.1 Signaux forts (Severity.STRONG possible)
 
 | Relevé | Commande réelle (à lancer à la main) | Ce que le parseur suppose |

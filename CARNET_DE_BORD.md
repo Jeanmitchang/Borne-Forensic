@@ -237,6 +237,19 @@ est un signal probatoire, pas un simple échec technique.
   de contact sécurité dans `SECURITY.md`, puis `gh repo edit --visibility public`.
 - **Prochaine action** : **essais terrain** (`docs/ESSAIS_TERRAIN.md`).
 
+### 2026-07-31 (5) — Checklist appareil Android de test
+- **Fait** : `docs/CHECKLIST_APPAREIL_ANDROID.md` — mise en place pas à pas d'un
+  appareil Android de test (prérequis adb Linux, débogage USB, clé RSA, détection
+  guardian via GUI), **activation contrôlée des 3 vecteurs FORTS** (accessibilité via
+  TalkBack, admin via « Localiser mon appareil », écouteur de notifications), scénario
+  de contrôle négatif, et remise à zéro. Référencée depuis `ESSAIS_TERRAIN.md` §4.0.
+- **Souligné** : le test de l'admin d'appareil est l'occasion de vérifier **P0-A**
+  (faux positifs de la regex `dumpsys device_policy`) — comparer admins réels vs
+  composants remontés par guardian.
+- **Ouvert (optionnel)** : construire une **APK de test dédiée** (déclarant les 3
+  services, bénigne) pour un jeu de tests reproductible — non fait, à la demande.
+- **Prochaine action** : essais réels dès qu'un appareil est disponible.
+
 <!--
 ### AAAA-MM-JJ — Titre
 - Fait :
