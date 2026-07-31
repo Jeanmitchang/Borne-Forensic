@@ -2,7 +2,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: "⚠️ Faille de sécurité (NE PAS ouvrir d'issue publique)"
-    url: https://github.com/OWNER/REPO/security/policy
+    url: https://github.com/Jeanmitchang/Borne-Forensic/security/policy
     about: >
       Une divulgation publique prématurée peut exposer des victimes ou alerter un
       agresseur. Signalez toute vulnérabilité en privé selon SECURITY.md.

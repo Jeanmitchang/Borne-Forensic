@@ -13,8 +13,14 @@
 **Ne créez pas d'issue publique pour une faille de sécurité.** Une divulgation publique
 prématurée pourrait exposer des victimes ou alerter des agresseurs.
 
-- Signalez en privé à : `<À COMPLÉTER : email de contact sécurité>`
-- Chiffrez votre message si possible : `<À COMPLÉTER : clé PGP / Signal>`
+- Signalez en privé au **mainteneur de ce dépôt**, à l'adresse de contact sécurité
+  indiquée ci-dessous :
+
+  > 📮 **Contact sécurité — à renseigner par le mainteneur / le redistributeur.**
+  > Ce projet est conçu pour être **redistribué** (associations, opérateurs) : le canal
+  > de signalement dépend de qui héberge le dépôt. Remplacez cette ligne par votre
+  > propre adresse, par exemple `securite@votre-organisation.org`.
+
 - Délai de première réponse visé : **72 heures**.
 - Merci d'inclure : description, étapes de reproduction, impact estimé, version/commit
   concerné, et toute piste de correctif.

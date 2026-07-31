@@ -4,6 +4,7 @@
 > logiciels de surveillance (**stalkerware**) sur les smartphones de victimes de
 > cyberharcèlement et de violences conjugales, **sans budget forensic commercial**.
 
+[![CI](https://github.com/Jeanmitchang/Borne-Forensic/actions/workflows/ci.yml/badge.svg)](https://github.com/Jeanmitchang/Borne-Forensic/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 [![Status](https://img.shields.io/badge/status-en%20développement-orange)]()
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)]()

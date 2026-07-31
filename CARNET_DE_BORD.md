@@ -123,9 +123,12 @@ de `CLAUDE.md` §3). **Ne pas les rediscuter sans raison.**
    faux admin FORT ?), **P0-C** (propagation du code retour `adb shell`), **P1-D** (APK
    en splits non capturés), timeouts, codes de sortie MVT. **P0-B corrigé** (mot de
    passe MVT iOS via `env`, cf. §7 session 2026-07-31).
-3. **`SECURITY.md`** — remplir les contacts sécurité (`<À COMPLÉTER>` : email + PGP)
-   **avant** toute publication publique du dépôt.
-4. **`.github/ISSUE_TEMPLATE/config.yml`** — remplacer `OWNER/REPO` par le vrai dépôt.
+3. ~~**`SECURITY.md`**~~ — **traité** : ligne PGP retirée ; contact sécurité transformé
+   en **champ libre documenté** (à renseigner par le mainteneur/redistributeur — le
+   projet est destiné à être partagé, l'adresse varie selon l'hébergeur). *Reste : le
+   mainteneur renseigne SON adresse avant de rendre le dépôt public.*
+4. ~~**`.github/ISSUE_TEMPLATE/config.yml`**~~ + **README** — **fait** : `OWNER/REPO` →
+   `Jeanmitchang/Borne-Forensic` ; badge CI ajouté au README (visible une fois public).
 5. **Empaquetage / doc d'installation Linux** (Budgie/Ubuntu).
 6. **Base de signatures/IOC** — documenter comment l'opérateur fournit et met à jour
    la base (chemin, format STIX2, versionnement) — le code la consomme déjà (`base_ioc`).
@@ -222,6 +225,17 @@ est un signal probatoire, pas un simple échec technique.
   `Jeanmitchang/Borne-Forensic`) ; ajouter le badge CI au README.
 - **Prochaine action** : essais terrain (`docs/ESSAIS_TERRAIN.md`), ou préparation de
   la mise en public (SECURITY.md + templates + badge).
+
+### 2026-07-31 (4) — Préparation de la mise en public
+- **Fait** :
+  - `.github/ISSUE_TEMPLATE/config.yml` : `OWNER/REPO` → `Jeanmitchang/Borne-Forensic`.
+  - `README.md` : badge CI ajouté (s'affichera une fois le dépôt public).
+  - `SECURITY.md` : ligne PGP/Signal retirée ; contact sécurité converti en **champ
+    libre documenté** — décision opérateur : le module sera **redistribué**, donc
+    l'adresse de signalement dépend de l'hébergeur et n'est pas figée en dur.
+- **Reste avant de rendre PUBLIC** : le mainteneur (Jeanmitchang) renseigne son adresse
+  de contact sécurité dans `SECURITY.md`, puis `gh repo edit --visibility public`.
+- **Prochaine action** : **essais terrain** (`docs/ESSAIS_TERRAIN.md`).
 
 <!--
 ### AAAA-MM-JJ — Titre
