@@ -36,6 +36,38 @@ def test_fenetre_se_construit(app: QApplication) -> None:
     assert fenetre._bouton_rapport.isEnabled() is False
 
 
+def test_options_acquisition_android_cochees_par_defaut(app: QApplication) -> None:
+    """Les options d'acquisition existent, cochées (acquisition complète par défaut)."""
+    fenetre = FenetrePrincipale()
+    assert fenetre._case_bugreport.isChecked()
+    assert fenetre._case_pull.isChecked()
+    assert fenetre._case_apks.isChecked()
+    # Décocher tout est possible = mode inventaire seul (sans copie de données).
+    for case in (fenetre._case_bugreport, fenetre._case_pull, fenetre._case_apks):
+        case.setChecked(False)
+        assert not case.isChecked()
+
+
+def test_raison_saut_analyse(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Une analyse est sautée si l'artefact manque ou si l'outil n'est pas installé."""
+    from guardian.gui import app as module_app
+
+    # Artefact d'entrée absent -> sauté.
+    absent = tmp_path / "bugreport.zip"
+    raison = module_app._raison_saut_analyse(absent, "mvt-android")
+    assert raison is not None and "absent" in raison
+
+    # Artefact présent mais outil non installé -> sauté.
+    present = tmp_path / "backup"
+    present.mkdir()
+    raison = module_app._raison_saut_analyse(present, "outil_inexistant_guardian_xyz")
+    assert raison is not None and "non installé" in raison
+
+    # Artefact présent + outil disponible -> lançable (None).
+    monkeypatch.setattr(module_app.shutil, "which", lambda binaire: f"/usr/bin/{binaire}")
+    assert module_app._raison_saut_analyse(present, "aleapp") is None
+
+
 def test_ouvrir_affaire_depuis_le_formulaire(app: QApplication, tmp_path: Path) -> None:
     fenetre = FenetrePrincipale()
     fenetre._champ_dossier.setText(str(tmp_path / "affaire"))

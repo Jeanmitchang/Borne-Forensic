@@ -25,7 +25,7 @@ journal_probatoire.*
 replay_manifest.jsonl
 consent.json
 MANIFEST.sha256
-rapport_synthese.pdf
+rapport_synthese.*
 
 # Secrets et identifiants (mots de passe de sauvegarde iOS, etc.)
 *.secret

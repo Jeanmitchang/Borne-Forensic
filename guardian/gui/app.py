@@ -14,12 +14,15 @@ que lorsqu'on lance réellement l'interface.
 
 from __future__ import annotations
 
+import shutil
 import sys
 from collections.abc import Callable
+from pathlib import Path
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QHBoxLayout,
@@ -36,11 +39,27 @@ from PyQt6.QtWidgets import (
 from guardian.acquisition.android_logical import AndroidLogicalAcquirer
 from guardian.acquisition.ios_backup import IOSBackupAcquirer
 from guardian.affaire import Affaire
+from guardian.analysis.autopsy_runner import AutopsyRunner
 from guardian.analysis.correlator import SyntheseCorrelation
+from guardian.analysis.leapp_runner import ALEAPPRunner, ILEAPPRunner
 from guardian.analysis.mvt_runner import MVTAndroidRunner, MVTIOSRunner
 from guardian.core.custody import Consentement
 from guardian.core.exceptions import GuardianError
 from guardian.detection.usb_watch import TypeAppareil
+
+
+def _raison_saut_analyse(cible: Path, binaire: str) -> str | None:
+    """Raison de **sauter** une analyse, ou ``None`` si elle peut être lancée.
+
+    Une analyse n'est lancée que si son artefact d'entrée existe (produit par
+    l'acquisition) ET si l'outil est installé. Sinon on la saute proprement (dégrader
+    sans planter, §5) plutôt que de laisser le pipeline échouer.
+    """
+    if not cible.exists():
+        return f"artefact d'entrée absent : {cible.name}"
+    if shutil.which(binaire) is None:
+        return f"outil « {binaire} » non installé"
+    return None
 
 
 class Travailleur(QThread):
@@ -87,6 +106,16 @@ class FenetrePrincipale(QMainWindow):
         self._champ_appareil = QLineEdit()
         self._champ_appareil.setPlaceholderText("série adb / UDID iOS")
 
+        # Options d'acquisition Android (décochables). TOUT décoché = inventaire des
+        # signaux seul, SANS copie de données (ni bugreport, ni /sdcard, ni APK) : un
+        # premier relevé non intrusif, adapté à un appareil non rincé. Cochées par
+        # défaut = acquisition complète (comportement forensic standard).
+        self._case_bugreport = QCheckBox("bugreport")
+        self._case_pull = QCheckBox("pull /sdcard")
+        self._case_apks = QCheckBox("APK des signaux forts")
+        for _case in (self._case_bugreport, self._case_pull, self._case_apks):
+            _case.setChecked(True)
+
         self._bouton_ouvrir = QPushButton("Ouvrir l'affaire")
         self._bouton_detecter = QPushButton("Détecter les appareils")
         self._bouton_pipeline = QPushButton("Acquisition + analyse")
@@ -120,6 +149,13 @@ class FenetrePrincipale(QMainWindow):
         ligne_appareil.addWidget(self._combo_type)
         ligne_appareil.addWidget(self._champ_appareil)
 
+        options = QHBoxLayout()
+        options.addWidget(QLabel("Acquisition Android :"))
+        options.addWidget(self._case_bugreport)
+        options.addWidget(self._case_pull)
+        options.addWidget(self._case_apks)
+        options.addStretch(1)
+
         boutons = QHBoxLayout()
         for bouton in (
             self._bouton_ouvrir,
@@ -132,6 +168,7 @@ class FenetrePrincipale(QMainWindow):
         disposition = QVBoxLayout()
         disposition.addLayout(formulaire)
         disposition.addLayout(ligne_appareil)
+        disposition.addLayout(options)
         disposition.addLayout(boutons)
         disposition.addWidget(self._etiquette_niveau)
         disposition.addWidget(self._journal, stretch=1)
@@ -201,24 +238,64 @@ class FenetrePrincipale(QMainWindow):
             self._erreur("Renseigner l'identifiant de l'appareil.")
             return
 
+        # Lire les options DANS le thread UI (jamais un widget depuis le QThread).
+        avec_bugreport = self._case_bugreport.isChecked()
+        avec_pull = self._case_pull.isChecked()
+        avec_apks = self._case_apks.isChecked()
+
         def tache(log: Callable[[str], None]) -> object:
             log("Acquisition en cours…")
+            executor = affaire.executor
             if type_appareil == TypeAppareil.ANDROID.value:
-                acq = AndroidLogicalAcquirer(affaire.executor, identifiant)
+                if not (avec_bugreport or avec_pull or avec_apks):
+                    log("Mode inventaire seul (aucune copie de données).")
+                acq = AndroidLogicalAcquirer(
+                    executor,
+                    identifiant,
+                    avec_bugreport=avec_bugreport,
+                    avec_pull_sdcard=avec_pull,
+                    avec_apks=avec_apks,
+                )
                 log(affaire.acquerir(acq).resume())
-                bugreport = affaire.dossier / "artefacts" / "bugreport.zip"
-                if bugreport.is_file():
-                    log("Analyse MVT Android…")
-                    runner = MVTAndroidRunner(affaire.executor, bugreport)
-                    log(affaire.analyser(runner).resume())
+                artefacts = affaire.dossier / "artefacts"
+                analyses = [
+                    (
+                        "MVT",
+                        "mvt-android",
+                        artefacts / "bugreport.zip",
+                        lambda c: MVTAndroidRunner(executor, c),
+                    ),
+                    (
+                        "ALEAPP",
+                        "aleapp",
+                        artefacts / "sdcard",
+                        lambda c: ALEAPPRunner(executor, c, type_entree="fs"),
+                    ),
+                    ("Autopsy", "autopsy", artefacts, lambda c: AutopsyRunner(executor, c)),
+                ]
             else:
-                acq_ios = IOSBackupAcquirer(affaire.executor, identifiant)
+                acq_ios = IOSBackupAcquirer(executor, identifiant)
                 log(affaire.acquerir(acq_ios).resume())
                 backup = affaire.dossier / "backup_ios"
-                if backup.is_dir():
-                    log("Analyse MVT iOS…")
-                    runner_ios = MVTIOSRunner(affaire.executor, backup)
-                    log(affaire.analyser(runner_ios).resume())
+                analyses = [
+                    ("MVT", "mvt-ios", backup, lambda c: MVTIOSRunner(executor, c)),
+                    (
+                        "iLEAPP",
+                        "ileapp",
+                        backup,
+                        lambda c: ILEAPPRunner(executor, c, type_entree="fs"),
+                    ),
+                    ("Autopsy", "autopsy", backup, lambda c: AutopsyRunner(executor, c)),
+                ]
+            # Chaîne d'analyse complète : chaque outil ne tourne que si son artefact
+            # d'entrée existe ET s'il est installé ; sinon on saute proprement (§5).
+            for nom, binaire, cible, fabrique in analyses:
+                raison = _raison_saut_analyse(cible, binaire)
+                if raison is not None:
+                    log(f"{nom} : sauté ({raison}).")
+                    continue
+                log(f"Analyse {nom}…")
+                log(affaire.analyser(fabrique(cible)).resume())
             return affaire.correler()
 
         self._pipeline_en_cours(True)

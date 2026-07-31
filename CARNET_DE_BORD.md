@@ -326,6 +326,58 @@ est un signal probatoire, pas un simple échec technique.
 - **Reste (idées)** : bugreport/pull réels (volumineux, données perso → prudence) ;
   côté iOS quand un appareil sera dispo ; PDF optionnel (wkhtmltopdf).
 
+### 2026-07-31 (10) — Cockpit : options d'acquisition (mode inventaire seul)
+- **Contexte** : l'opérateur veut relancer les primos tests via le **dashboard**
+  (`python -m guardian.gui.app`, PyQt6 6.9.1 présent). Or le bouton pipeline
+  construisait `AndroidLogicalAcquirer(executor, identifiant)` **sans options** →
+  acquisition complète, dont **pull /sdcard** (risque : aspirer les données perso d'un
+  appareil non rincé).
+- **Fait** : ajout de 3 cases à cocher au cockpit (bugreport / pull /sdcard / APK),
+  cochées par défaut. **Tout décoché = inventaire des signaux seul** (= nos primos
+  tests, sans copie). États lus dans le thread UI, passés à l'acquéreur. +1 test GUI.
+  **188 tests verts.**
+- **Reproduire les primos tests via la GUI** : Ouvrir affaire → Détecter → **décocher
+  les 3 cases** → Acquisition + analyse → Rapport.
+- **Prochaine action** : essais GUI par l'opérateur ; commit du lot (non commité).
+
+### 2026-07-31 (11) — Cockpit : chaîne d'analyse complète (LEAPP + Autopsy)
+- **Contexte** : le cockpit ne câblait que **MVT**. LEAPP/Autopsy existaient comme
+  modules mais n'étaient pas dans le pipeline GUI.
+- **Fait** : `_lancer_pipeline` enchaîne maintenant, par plateforme, une liste
+  d'analyses `(outil, binaire, artefact d'entrée, fabrique)` :
+  - Android : MVT (`bugreport.zip`) → ALEAPP (`artefacts/sdcard`, fs) → Autopsy (`artefacts`).
+  - iOS : MVT (`backup_ios`) → iLEAPP (`backup_ios`, fs) → Autopsy (`backup_ios`).
+  - Chaque étape **sautée proprement** si l'artefact d'entrée manque OU si l'outil
+    n'est pas installé (`shutil.which`) — helper testable `_raison_saut_analyse`.
+    Corrige aussi le cas d'un MVT absent qui faisait échouer tout le pipeline.
+- **Effet visible** : sur un poste sans mvt/aleapp/autopsy (ex. le poste Windows de
+  dev), le journal affiche « MVT : sauté (outil … non installé) » etc. ; sur le poste
+  Linux de prod avec les outils, les analyses tournent. **189 tests verts.**
+- **Non commité** : lots GUI cumulés (options d'acquisition + chaîne d'analyse).
+- **Prochaine action** : commit du lot GUI ; puis, si voulu, exposer LEAPP/Autopsy en
+  cases à cocher (comme l'acquisition) pour un contrôle fin par l'opérateur.
+
+### 2026-07-31 (12) — MVT sous Windows + venv dédié `.venv`
+- **Objectif** : permettre l'analyse MVT sous Windows (dev) pour tester la chaîne.
+- **Obstacle** : MVT réclame `pyahocorasick==2.1.0`, sans wheel pour **Python 3.13** et
+  pas de compilateur MSVC → build en échec. Contournement : `pyahocorasick==2.2.0` a un
+  **wheel cp313** ; MVT l'accepte. `pip install mvt "pyahocorasick==2.2.0"` fonctionne.
+- **Fait** : créé un **venv dédié `.venv`** (Python 3.13, gitignoré) avec
+  `pip install -e ".[dev,gui]" mvt "pyahocorasick==2.2.0"`. MVT (`mvt-android`,
+  `mvt-ios`) opérationnel et **détecté par guardian** (`shutil.which` → `.venv/Scripts`).
+  Chaîne qualité verte dans le venv ; **ruff y est 0.16.1** (= la CI, fin de la
+  divergence locale 0.13.3).
+- **Effet de bord assumé** : l'install initiale (avant le venv) a été faite dans le
+  Python **global** et a bumpé `packaging/click/rich` (conflits déclarés avec
+  streamlit/gradio, souvent bénins). Le venv rend le global inutile pour guardian ;
+  nettoyage du global (désinstaller `mvt`) possible mais non urgent (ne rétablit pas
+  les bumps).
+- **Lancer guardian désormais** (isolation) : activer le venv d'abord —
+  `.\.venv\Scripts\Activate.ps1` (PowerShell) puis `python -m guardian.gui.app`.
+- **Portabilité** : sous Windows, MVT `check-bugreport`/`check-backup` (parsing)
+  fonctionne ; l'acquisition live iOS (libimobiledevice) reste Linux-only.
+- **Prochaine action** : commit du lot GUI (options + LEAPP/Autopsy), toujours en attente.
+
 <!--
 ### AAAA-MM-JJ — Titre
 - Fait :

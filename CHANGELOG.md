@@ -15,6 +15,11 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Corrigé
+- **`.gitignore` : livrables d'affaire toujours ignorés (protection des données).**
+  `rapport_synthese.pdf` → `rapport_synthese.*` : le rapport HTML d'un dossier d'affaire
+  (données potentiellement sensibles) n'était pas ignoré et pouvait remonter dans un
+  `git status` si le dossier était nommé hors convention. Désormais couvert quel que
+  soit l'emplacement (§2 : aucune donnée d'affaire dans le dépôt).
 - **APK en splits non capturés (P1-D) — confirmé sur appareil réel.** `extraire_apk`
   ne récupérait que le **premier** chemin de `pm path` (`base.apk`). Or les applications
   modernes (app bundles) sont réparties sur plusieurs APK : sur un OPPO réel, GMS a
@@ -51,6 +56,17 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   (backup en clair uniquement). Détecté en préparation des essais terrain.
 
 ### Ajouté
+- **Chaîne d'analyse complète dans le cockpit** (`gui/app.py`) : le pipeline enchaîne
+  désormais **MVT + LEAPP (A/iLEAPP) + Autopsy** (Android et iOS), là où seul MVT était
+  câblé. Chaque analyseur ne tourne que si son **artefact d'entrée existe** ET si
+  l'**outil est installé** ; sinon l'étape est **sautée proprement** avec un message
+  clair (dégrader sans planter, §5) — ce qui corrige aussi le cas où un MVT absent
+  faisait échouer tout le pipeline. Helper testable `_raison_saut_analyse`. 1 test.
+- **Options d'acquisition Android dans le cockpit** (`gui/app.py`) : trois cases à
+  cocher — `bugreport`, `pull /sdcard`, `APK des signaux forts`. Cochées par défaut
+  (acquisition complète). **Tout décoché = inventaire des signaux seul**, sans aucune
+  copie de données — un premier relevé non intrusif, adapté à un appareil non rincé.
+  Les états sont lus dans le thread UI puis passés à `AndroidLogicalAcquirer`. 1 test.
 - **Intégration continue** (`.github/workflows/ci.yml`, GitHub Actions, Ubuntu) :
   verrouille la cible Linux réelle (dev sous Windows) et les fins de ligne LF, et
   rejoue la chaîne qualité exigée avant chaque commit. Trois jobs — `lint` (ruff
