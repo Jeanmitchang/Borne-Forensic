@@ -60,6 +60,12 @@ include = ["guardian*"]
 [tool.ruff]
 target-version = "py311"
 line-length = 95
+# La documentation Markdown (CLAUDE.md en tête, source de vérité éditée à la main)
+# n'est PAS gérée par ruff : depuis ruff 0.16, `ruff format` reformate les blocs de
+# code Python embarqués dans les .md, ce qui altérerait nos exemples de spec. On sort
+# donc les .md du périmètre de ruff (lint ET format) pour un comportement stable
+# quelle que soit la version de ruff.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 # E/W pycodestyle, F pyflakes, I isort, UP pyupgrade, B bugbear, SIM simplify,
