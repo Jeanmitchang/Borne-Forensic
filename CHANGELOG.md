@@ -24,6 +24,12 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
   (backup en clair uniquement). Détecté en préparation des essais terrain.
 
 ### Ajouté
+- **Intégration continue** (`.github/workflows/ci.yml`, GitHub Actions, Ubuntu) :
+  verrouille la cible Linux réelle (dev sous Windows) et les fins de ligne LF, et
+  rejoue la chaîne qualité exigée avant chaque commit. Trois jobs — `lint` (ruff
+  lint + format, `mypy --strict`, contrôle anti-CRLF), `tests` (pytest sur la matrice
+  Python 3.11/3.12/3.13), `gui` (tests PyQt6 en mode offscreen sous xvfb). Permissions
+  en lecture seule ; aucun outil forensic réel requis (simulacres).
 - **Voie `env` de `TracedExecutor.executer`** : passage de variables d'environnement
   **surchargeant** `os.environ` (héritage préservé), réservé aux **secrets** hors
   `args` — comme `entree` (stdin), `env` n'est **ni archivé** dans `raw/` **ni

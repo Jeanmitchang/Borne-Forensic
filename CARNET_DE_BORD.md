@@ -110,9 +110,10 @@ de `CLAUDE.md` §3). **Ne pas les rediscuter sans raison.**
 
 ## 5. Points ouverts / À faire (par priorité)
 
-1. **CI GitHub Actions (Ubuntu)** — `ruff` + `mypy --strict` + `pytest` (avec `xvfb`
-   pour les tests PyQt6). Verrouille la cible Linux réelle (dev sous Windows) et les
-   fins de ligne LF. *Prochaine action conseillée.*
+1. ~~**CI GitHub Actions (Ubuntu)**~~ — **FAIT** (`.github/workflows/ci.yml`) : jobs
+   `lint` (ruff + `mypy --strict` + contrôle anti-CRLF), `tests` (matrice Python
+   3.11/3.12/3.13), `gui` (PyQt6 offscreen sous `xvfb`). *S'exécutera au premier push
+   sur GitHub (aucun remote configuré à ce jour).*
 2. **Essais sur appareils réels** — les runners sont validés avec des outils simulés
    (adb/mvt/idevicebackup2/leapp/autopsy factices). Confronter aux vraies sorties.
    **Protocole + audit priorisé** disponibles : `docs/ESSAIS_TERRAIN.md`. Points
@@ -187,6 +188,17 @@ est un signal probatoire, pas un simple échec technique.
   au matériel réel** (pas faisable sans appareil).
 - **Prochaine action** : essais terrain guidés par `docs/ESSAIS_TERRAIN.md`, ou CI
   GitHub Actions (§5.1), selon disponibilité du matériel.
+
+### 2026-07-31 (2) — CI GitHub Actions
+- **Fait** : `.github/workflows/ci.yml` — jobs `lint` (ruff lint + format,
+  `mypy --strict`, contrôle anti-CRLF), `tests` (pytest sur matrice Python
+  3.11/3.12/3.13), `gui` (PyQt6 offscreen sous `xvfb`, libs Qt système). Permissions
+  lecture seule, annulation des runs obsolètes. YAML validé, contrôle LF vérifié
+  localement (aucun CRLF committé).
+- **En cours / bloqué** : aucun remote Git configuré → la CI ne s'exécutera qu'au
+  premier `git push` vers GitHub. Badge README à ajouter une fois le slug connu (§5.4).
+- **Prochaine action** : publier le dépôt (remplir `SECURITY.md` §5.3 et les templates
+  `.github` §5.4 **avant** publication), ou essais terrain.
 
 <!--
 ### AAAA-MM-JJ — Titre
