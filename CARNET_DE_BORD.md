@@ -119,10 +119,12 @@ de `CLAUDE.md` §3). **Ne pas les rediscuter sans raison.**
 2. **Essais sur appareils réels** — les runners sont validés avec des outils simulés
    (adb/mvt/idevicebackup2/leapp/autopsy factices). Confronter aux vraies sorties.
    **Protocole + audit priorisé** disponibles : `docs/ESSAIS_TERRAIN.md`. Points
-   restant à vérifier terrain : **P0-A** (`dumpsys device_policy` parsé en regex →
-   faux admin FORT ?), **P0-C** (propagation du code retour `adb shell`), **P1-D** (APK
-   en splits non capturés), timeouts, codes de sortie MVT. **P0-B corrigé** (mot de
-   passe MVT iOS via `env`, cf. §7 session 2026-07-31).
+   restant à vérifier terrain : timeouts (iOS/pull), codes de sortie MVT, **vrai
+   positif** (activer un vecteur FORT et confirmer la détection). **Corrigés & confirmés
+   sur appareil réel** : **P0-A** (faux admins `calls/s`/`dur/s`), **P1-D** (splits APK
+   désormais tous capturés). **P0-B corrigé** (mdp MVT iOS via `env`). **P0-C vérifié**
+   (propagation code retour OK sur adb v36) ; **P0-C′ corrigé** (échec masqué `dumpsys`
+   exit 0 + stderr = fausse absence). Cf. §7 sessions (6)–(7).
 3. ~~**`SECURITY.md`**~~ — **traité** : ligne PGP retirée ; contact sécurité transformé
    en **champ libre documenté** (à renseigner par le mainteneur/redistributeur — le
    projet est destiné à être partagé, l'adresse varie selon l'hébergeur). *Reste : le
@@ -249,6 +251,80 @@ est un signal probatoire, pas un simple échec technique.
 - **Ouvert (optionnel)** : construire une **APK de test dédiée** (déclarant les 3
   services, bénigne) pour un jeu de tests reproductible — non fait, à la demande.
 - **Prochaine action** : essais réels dès qu'un appareil est disponible.
+
+### 2026-07-31 (6) — Premier essai terrain réel (OPPO CPH2173) → P0-A corrigé
+- **Contexte** : premier branchement d'un appareil Android réel (OPPO CPH2173, série
+  `cc379894`) en USB. Déroulé du process d'essai `docs/ESSAIS_TERRAIN.md` §4 : pont
+  `adb` établi, relevé des 4 signaux bruts, puis application des **parseurs réels** de
+  guardian aux vraies sorties.
+- **Découverte (P0-A confirmé)** : sur `dumpsys device_policy` (631 lignes), la regex
+  globale extrayait **4** « administrateurs » dont **2 faux** (`calls/s`, `dur/s`,
+  issus d'une ligne de stats `LockGuard.guard(): … max calls/s=… max dur/s=…`).
+- **Décidé & fait** : refonte de `_parser_composants_admin` — **ancrage sur la section
+  « Enabled Device Admins » + formes strictes** (composant nu `pkg/cls:` **ou**
+  `ComponentInfo{pkg/cls}`) + repli sans en-tête. Découverte au passage que les tests
+  simulaient le format `ComponentInfo{}` alors que l'OPPO réel utilise la forme nue :
+  **les deux formats coexistent** et sont désormais gérés.
+- **Résultat** : 2 vrais admins sur données réelles, 0 bruit ; fixtures existantes
+  toujours vertes ; +2 tests de non-régression. **184 tests verts**, chaîne qualité OK.
+- **Autres relevés (bénins, bien parsés)** : accessibilité `null` ; 3 écouteurs de
+  notifications légitimes (Android Auto, Wear OS, HeyTap Health OPPO) — rappel : un
+  signal FORT ≠ malveillant, l'expert triangule ; 300 paquets tiers.
+- **Prochaine action** : poursuivre les relevés terrain — **P0-C** (code retour
+  `adb shell`), puis créer des signaux FORTS contrôlés (checklist §F) pour valider les
+  vrais positifs.
+
+### 2026-07-31 (7) — Terrain (suite) : P0-C vérifié, P0-C′ durci
+- **Fait** : batterie de tests `adb shell` sur l'OPPO réel pour P0-C (propagation du
+  code retour).
+  - **P0-C** : propagation **fonctionnelle** (`exit 7`→7, binaire absent→127,
+    `ls` absent→1). Le risque historique « adb shell renvoie toujours 0 » ne se
+    matérialise pas sur adb v36/Android récent.
+  - **P0-C′ (découverte)** : `dumpsys <service_absent>` → **exit 0 + stdout vide +
+    stderr** « Can't find service ». Guardian n'examinait que code+stdout → risque de
+    **fausse absence silencieuse**.
+- **Décidé & fait** : durcissement — `Acquirer._releve_non_concluant` traite « code 0 +
+  stdout vide + stderr non vide » comme non concluant (confiance faible) ; message
+  d'échec distingue le cas et affirme « ce n'est PAS une absence ». Ajout de
+  `ExecutionTracee.texte_stderr()`. Relevés accessibilité/notifications/admins/paquets
+  branchés dessus. **185 tests verts.**
+- **Non commité** : lots P0-A + P0-C′ cumulés (commit différé à la demande de
+  l'opérateur).
+- **Prochaine action** : valider un **vrai positif** (checklist §F : activer TalkBack →
+  guardian doit remonter le service d'accessibilité en FORT).
+
+### 2026-07-31 (8) — Terrain (suite) : P1-D corrigé (splits APK)
+- **Fait** : `pm path` sur 4 paquets réels de l'OPPO → **tous en splits** (GMS base +
+  10 splits, Play Store +6, YouTube +3, Chrome +5). `extraire_apk` ne prenait que
+  `chemins[0]` (base.apk) → **P1-D confirmé** : capture incomplète (les splits
+  `config.arm64_v8a` portent le code natif .so).
+- **Décidé & fait** : `extraire_apk` pulle désormais **tous** les composants (base +
+  splits), les hache tous ; capture partielle (split en échec) → confiance faible +
+  décompte des composants manquants. +2 tests. **187 tests verts.**
+- **Non commité** : lots P0-A + P0-C′ + P1-D cumulés (commit différé, à la demande).
+- **Vrai positif validé** : TalkBack activé → `enabled_accessibility_services` passe de
+  `null` au composant `com.google.android.marvin.talkback/…TalkBackService` ; le parseur
+  guardian l'extrait correctement (remontée FORT). Cycle accessibilité complet OK
+  (négatif → positif). **Aucune correction nécessaire** sur ce vecteur.
+- **Prochaine action** : committer les lots cumulés ; puis, autres vecteurs (activer un
+  admin d'appareil / un écouteur de notifications) et P0-C′ côté iOS/pull si besoin.
+
+### 2026-07-31 (9) — Test d'intégration : pipeline réel sur l'OPPO
+- **Fait** : lancé le **vrai pipeline** guardian (`TracedExecutor` + `JournalCustody` +
+  `AndroidLogicalAcquirer.inventorier_signaux`, **sans** `acquerir` pour ne rien puller
+  de personnel) contre l'appareil réel. 4 Findings produits (F-0001..F-0004),
+  chacun tracé (commande exacte), sorties brutes archivées + hachées dans `raw/`,
+  custody chaînée horodatée UTC.
+- **Confirmé en contexte réel** : F-0003 (admins) remonte **2** composants → le correctif
+  P0-A tient dans le pipeline complet, pas seulement en test unitaire.
+- **Rapport réel généré** (chaîne complète inventaire → corrélation → livrable) :
+  niveau `FORTS` (2 STRONG, bénins mais guardian oriente sans conclure) ; journal
+  JSONL+HTML, synthèse HTML, `MANIFEST.sha256` (hache tout le dossier), tous produits.
+  `replay_manifest.jsonl` **vide** (tous POINT_IN_TIME — honnête). Intégrité vérifiée :
+  le sha256 de `raw/F-0001.out` dans le MANIFEST == celui porté par le Finding.
+  **Toute la chaîne est validée sur appareil réel.**
+- **Reste (idées)** : bugreport/pull réels (volumineux, données perso → prudence) ;
+  côté iOS quand un appareil sera dispo ; PDF optionnel (wkhtmltopdf).
 
 <!--
 ### AAAA-MM-JJ — Titre

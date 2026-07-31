@@ -44,6 +44,29 @@ from guardian.detection.usb_watch import TypeAppareil
 _MOTIF_COMPOSANT = re.compile(r"[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+")
 _MOTIF_PAQUET = re.compile(r"^[A-Za-z0-9_.]+$")
 _PREFIXE_PAQUET = "package:"
+# Un administrateur listé par « dumpsys device_policy » apparaît, selon la version
+# d'Android, sous deux formes : soit un composant SEUL suivi de « : » (AOSP récent,
+# p. ex. « com.pkg/.Cls: »), soit enveloppé dans « ComponentInfo{com.pkg/.Cls} ».
+# Les deux sont ancrées sous l'en-tête de la section des admins actifs.
+_MOTIF_LIGNE_ADMIN = re.compile(r"^([A-Za-z0-9_.]+/[A-Za-z0-9_.$]+):$")
+_MOTIF_COMPONENTINFO = re.compile(r"ComponentInfo\{([A-Za-z0-9_.]+/[A-Za-z0-9_.$]+)\}")
+_MOTIF_ENTETE_ADMINS = re.compile(r"Device Admins.*:$")
+
+
+def _admin_de_ligne(contenu: str) -> str | None:
+    """Composant admin d'une ligne : forme nue ``composant:`` ou ``ComponentInfo{…}``.
+
+    Retourne ``None`` pour toute autre ligne — ce qui écarte le bruit de la sortie
+    (p. ex. ``… max calls/s=… max dur/s=…`` : ``calls/s`` matche « paquet/classe » mais
+    n'est ni un composant isolé, ni enveloppé dans ``ComponentInfo{…}``).
+    """
+    nue = _MOTIF_LIGNE_ADMIN.match(contenu)
+    if nue:
+        return nue.group(1)
+    enveloppe = _MOTIF_COMPONENTINFO.search(contenu)
+    if enveloppe:
+        return enveloppe.group(1)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -61,15 +84,47 @@ def _parser_liste_composants(sortie: str) -> list[str]:
 
 
 def _parser_composants_admin(sortie: str) -> list[str]:
-    """Extrait les composants candidats d'administrateur depuis ``dumpsys device_policy``.
+    """Extrait les administrateurs d'appareil depuis ``dumpsys device_policy``.
 
-    Heuristique (dédupliquée, ordre préservé) : la sortie de ``dumpsys device_policy``
-    n'a pas de format stable ; on relève les composants ``paquet/classe``. La sortie
+    **Ancrage sur la section « Enabled Device Admins »** (format AOSP) : chaque admin y
+    est une ligne indentée ``composant:`` (un composant seul). On n'accepte que cette
+    forme stricte, ce qui écarte le **bruit** de la sortie — p. ex. une ligne de
+    statistiques ``… max calls/s=… max dur/s=…`` dont ``calls/s`` et ``dur/s`` matchent
+    par accident le motif ``paquet/classe`` (faux positifs observés sur appareil réel).
+
+    Si **aucun en-tête** de section n'est reconnu (format OEM inhabituel), on se rabat
+    sur la même forme stricte appliquée à toute la sortie — nettement plus sûr qu'une
+    recherche globale du motif ``paquet/classe``. Dédupliqué, ordre préservé ; la sortie
     brute reste archivée pour analyse experte.
     """
     vus: dict[str, None] = {}
-    for composant in _MOTIF_COMPOSANT.findall(sortie):
-        vus.setdefault(composant, None)
+    dans_section = False
+    entete_vue = False
+    indent_entete = -1
+    for ligne in sortie.splitlines():
+        if not ligne.strip():
+            continue
+        contenu = ligne.strip()
+        indent = len(ligne) - len(ligne.lstrip())
+        if _MOTIF_ENTETE_ADMINS.search(contenu):
+            dans_section = True
+            entete_vue = True
+            indent_entete = indent
+            continue
+        if dans_section:
+            if indent <= indent_entete:  # retour au niveau de l'en-tête = fin de section
+                dans_section = False
+            else:
+                composant = _admin_de_ligne(contenu)
+                if composant is not None:
+                    vus.setdefault(composant, None)
+                continue
+    if not entete_vue:
+        # Repli : aucune section reconnue → mêmes formes strictes sur toute la sortie.
+        for ligne in sortie.splitlines():
+            composant = _admin_de_ligne(ligne.strip())
+            if composant is not None:
+                vus.setdefault(composant, None)
     return list(vus)
 
 
@@ -177,7 +232,7 @@ class AndroidLogicalAcquirer(Acquirer):
         parseur: Callable[[str], list[str]],
     ) -> ReleveSignal:
         tracee = self._adb_shell(commande)
-        if tracee.trace.exit_code != 0:
+        if self._releve_non_concluant(tracee):
             return ReleveSignal(self._finding_echec(tracee, releve), ())
         composants = parseur(tracee.texte_stdout())
         finding = self._finding_liste_forte(tracee, composants, libelle)
@@ -209,7 +264,7 @@ class AndroidLogicalAcquirer(Acquirer):
 
     def _relever_paquets_tiers(self) -> ReleveSignal:
         tracee = self._adb_shell(["pm", "list", "packages", "-3"])
-        if tracee.trace.exit_code != 0:
+        if self._releve_non_concluant(tracee):
             return ReleveSignal(self._finding_echec(tracee, "paquets tiers"), ())
         paquets = _parser_paquets(tracee.texte_stdout())
         value = f"{len(paquets)} paquet(s) tiers installé(s) : " + ", ".join(paquets)
@@ -304,18 +359,36 @@ class AndroidLogicalAcquirer(Acquirer):
             )
         destination = self._dossier_artefacts / "apk" / paquet
         destination.mkdir(parents=True, exist_ok=True)
-        tracee_pull = self._adb(
-            ["pull", chemins[0], str(destination)], timeout=self._timeout_lourd
-        )
+        # Puller TOUS les composants (base + splits). Une application distribuée en
+        # « app bundle » est répartie sur plusieurs APK : ne prendre que le premier
+        # figerait une capture INCOMPLÈTE — or les splits « config.* » portent le code
+        # natif (.so), souvent l'essentiel d'un malware (essais terrain P1-D). Chaque
+        # pull est tracé individuellement par le TracedExecutor.
+        nb_echecs = 0
+        tracee_pull: ExecutionTracee | None = None
+        for chemin in chemins:
+            tracee_pull = self._adb(
+                ["pull", chemin, str(destination)], timeout=self._timeout_lourd
+            )
+            if tracee_pull.trace.exit_code != 0:
+                nb_echecs += 1
         fichiers = [p for p in destination.rglob("*") if p.is_file()]
-        if tracee_pull.trace.exit_code != 0 or not fichiers:
-            return self._finding_echec(tracee_pull, f"pull APK {paquet}"), ()
+        if tracee_pull is None or not fichiers:
+            return self._finding_echec(tracee_pull or tracee_path, f"pull APK {paquet}"), ()
         refs = tuple(self._rel(p) for p in fichiers)
         empreintes = ", ".join(f"{p.name}={hacher_fichier(p)[:16]}…" for p in fichiers)
+        complet = nb_echecs == 0
+        if complet:
+            detail = f"{len(fichiers)} APK ({empreintes})"
+        else:
+            detail = (
+                f"{len(fichiers)} APK récupéré(s) sur {len(chemins)} — "
+                f"{nb_echecs} composant(s) NON récupéré(s) ({empreintes})"
+            )
         finding = tracee_pull.en_finding(
-            value=f"APK de {paquet} extrait ({empreintes}).",
+            value=f"APK de {paquet} extrait : {detail}.",
             severity=Severity.MEDIUM,
-            confidence=Confidence.HIGH,
+            confidence=Confidence.HIGH if complet else Confidence.LOW,
             reproducibility=Reproducibility.POINT_IN_TIME,
         )
         return finding, refs

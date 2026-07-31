@@ -15,6 +15,33 @@ adhère au [versionnement sémantique](https://semver.org/lang/fr/).
 ## [Non publié]
 
 ### Corrigé
+- **APK en splits non capturés (P1-D) — confirmé sur appareil réel.** `extraire_apk`
+  ne récupérait que le **premier** chemin de `pm path` (`base.apk`). Or les applications
+  modernes (app bundles) sont réparties sur plusieurs APK : sur un OPPO réel, GMS a
+  `base.apk` **+ 10 splits**, le Play Store **+ 6**, dont `split_config.arm64_v8a`
+  portant le **code natif (.so)** — souvent l'essentiel d'un malware. La capture était
+  donc **incomplète** (pièce contestable). Désormais **tous** les composants (base +
+  splits) sont pullés et hachés ; une capture partielle (un split en échec) est
+  signalée en **confiance faible** avec le décompte des composants manquants. 2 tests.
+- **Fausse absence silencieuse sur échec masqué (P0-C′) — révélé sur appareil réel.**
+  Les relevés Android ne jugeaient l'échec que sur le **code de sortie**. Or, sur un
+  OPPO réel, `dumpsys <service_absent>` sort en **code 0** avec un **stdout vide** et
+  l'erreur sur **stderr** (« Can't find service ») : le relevé aurait été interprété
+  « aucun résultat » (fausse absence) au lieu d'« échec ». Un relevé qui sort en code 0
+  mais sans aucune sortie exploitable **et** avec une erreur sur stderr est désormais
+  traité comme **non concluant** (confiance faible), jamais comme une absence (§2.6,
+  §5). Le message d'échec distingue ce cas et rappelle « ce n'est PAS une absence de
+  signal ». Ajout de `ExecutionTracee.texte_stderr()` (symétrique de `texte_stdout`).
+  1 test de non-régression (adb simulé reproduisant la sortie réelle).
+- **Faux positifs d'administrateurs d'appareil (P0-A) — confirmé sur appareil réel.**
+  `_parser_composants_admin` relevait *tout* motif « paquet/classe » dans la sortie de
+  `dumpsys device_policy` : sur un OPPO réel, une ligne de statistiques
+  `… max calls/s=… max dur/s=…` produisait deux faux administrateurs (`calls/s`,
+  `dur/s`) — un **signal FORT erroné**, à portée juridique. Le parseur s'ancre désormais
+  sur la section « Enabled Device Admins » et n'accepte que les formes strictes d'une
+  entrée d'admin (composant nu `com.pkg/.Cls:` **ou** `ComponentInfo{com.pkg/.Cls}`),
+  avec repli sur ces mêmes formes si aucun en-tête n'est reconnu. Vérifié sur la vraie
+  sortie (2 vrais admins, 0 bruit) ; 2 tests de non-régression ajoutés.
 - **Analyse MVT iOS sur sauvegarde chiffrée (angle mort).** `mvt-ios check-backup` ne
   peut lire une sauvegarde chiffrée sans le mot de passe ; le runner ne le fournissait
   pas → risque de « aucun IOC » **silencieux** sur le cas nominal (le chiffré capture

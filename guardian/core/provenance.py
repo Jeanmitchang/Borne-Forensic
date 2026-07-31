@@ -189,6 +189,10 @@ class ExecutionTracee:
         """Décode stdout en texte (``replace`` par défaut : ne jamais planter dessus)."""
         return self.stdout.decode(encodage, erreurs)
 
+    def texte_stderr(self, encodage: str = "utf-8", erreurs: str = "replace") -> str:
+        """Décode stderr en texte (``replace`` par défaut : ne jamais planter dessus)."""
+        return self.stderr.decode(encodage, erreurs)
+
     def en_finding(
         self,
         *,

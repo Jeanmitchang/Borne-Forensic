@@ -132,16 +132,42 @@ class Acquirer(ABC):
         """Chemin relatif POSIX d'un artefact, à la racine du dossier d'affaire."""
         return chemin.relative_to(self._executor.dossier).as_posix()
 
+    @staticmethod
+    def _releve_non_concluant(tracee: ExecutionTracee) -> bool:
+        """Vrai si un relevé est en échec — **y compris un échec masqué**.
+
+        Échec franc : code de sortie non nul. Échec **masqué** : la commande sort en
+        code 0 mais ne produit **rien** sur stdout tout en **signalant une erreur sur
+        stderr** — observé sur appareil réel avec ``dumpsys <service_absent>`` (exit 0
+        + « Can't find service », stdout vide). Le traiter comme une absence serait une
+        **fausse absence silencieuse** (§2.6 « échouer bruyamment », §5 honnêteté).
+
+        Une absence **légitime** (p. ex. ``settings get`` → ``null``, ou stdout vide
+        **sans** erreur sur stderr) n'est pas concernée : elle a un stdout exploitable
+        ou aucune erreur signalée.
+        """
+        if tracee.trace.exit_code != 0:
+            return True
+        return not tracee.texte_stdout().strip() and bool(tracee.texte_stderr().strip())
+
     def _finding_echec(self, tracee: ExecutionTracee, releve: str) -> Finding:
-        """Finding pour une opération en échec : confiance faible, sortie brute conservée.
+        """Finding pour une opération non concluante : confiance faible, sortie conservée.
 
         On documente l'échec (jamais masqué, §5) plutôt que d'abandonner : la sortie
-        brute reste archivée pour analyse.
+        brute reste archivée pour analyse. Le message distingue l'échec franc de
+        l'échec **masqué** (code 0 mais erreur sur stderr) et rappelle explicitement
+        que ce n'est **pas** une absence de signal.
         """
+        code = tracee.trace.exit_code
+        cause = (
+            "code 0 mais aucune sortie exploitable et une erreur signalée sur stderr"
+            if code == 0
+            else f"code {code}"
+        )
         return tracee.en_finding(
             value=(
-                f"Opération « {releve} » en échec (code {tracee.trace.exit_code}) — "
-                "voir la sortie brute ; résultat non concluant."
+                f"Opération « {releve} » non concluante ({cause}) — voir la sortie "
+                "brute. Ce n'est PAS une absence de signal (résultat indéterminé)."
             ),
             severity=Severity.INFO,
             confidence=Confidence.LOW,

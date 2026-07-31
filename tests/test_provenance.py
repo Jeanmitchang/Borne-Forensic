@@ -57,6 +57,7 @@ def test_executer_capture_archive_et_journalise(tmp_path: Path) -> None:
     assert res.finding_id == "F-0001"
     assert res.stdout == b"bonjour"
     assert res.texte_stdout() == "bonjour"
+    assert res.texte_stderr() == "oups"
     assert res.trace.exit_code == 3
 
     # Sortie brute archivée et hachée.
